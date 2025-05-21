@@ -1,68 +1,83 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import COLORS from "../constants/colors"; // ✅ Importação centralizada
+import {
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import COLORS from "../constants/colors";
 
+/**
+ * Header global com título centralizado e ícones nas laterais.
+ */
 export default function Header({ titulo = "Título" }) {
   const router = useRouter();
 
   return (
-    <View style={styles.header}>
-      {/* Botão Menu (placeholder) */}
-      <TouchableOpacity
+    <View style={styles.container} accessible accessibilityRole="header">
+      {/* Botão de Menu (placeholder funcional) */}
+      <HeaderIcon
+        name="menu"
+        label="Abrir menu lateral"
         onPress={() => console.log("Menu aberto")}
-        accessibilityRole="button"
-        accessibilityLabel="Abrir menu"
-        hitSlop={8}
-        style={styles.iconeWrapper}
-      >
-        <Ionicons name="menu" size={24} color={COLORS.branco} />
-      </TouchableOpacity>
+      />
 
-      {/* Título */}
-      <Text
-        style={styles.titulo}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        accessibilityRole="header"
-      >
+      {/* Título Centralizado */}
+      <Text style={styles.titulo} numberOfLines={1} ellipsizeMode="tail">
         {titulo}
       </Text>
 
-      {/* Botão Estatísticas */}
-      <TouchableOpacity
+      {/* Botão de Estatísticas */}
+      <HeaderIcon
+        name="stats-chart"
+        label="Ir para estatísticas"
         onPress={() => router.push("/estatisticas")}
-        accessibilityRole="button"
-        accessibilityLabel="Ver estatísticas"
-        hitSlop={8}
-        style={styles.iconeWrapper}
-      >
-        <Ionicons name="stats-chart" size={24} color={COLORS.branco} />
-      </TouchableOpacity>
+      />
     </View>
   );
 }
 
+/**
+ * Subcomponente reutilizável de ícone de ação.
+ */
+function HeaderIcon({ name, label, onPress }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      accessibilityLabel={label}
+      accessibilityRole="button"
+      hitSlop={12}
+      style={styles.touchArea}
+    >
+      <Ionicons name={name} size={24} color={COLORS.branco} />
+    </TouchableOpacity>
+  );
+}
+
 const styles = StyleSheet.create({
-  header: {
+  container: {
     backgroundColor: COLORS.verde,
-    paddingTop: 50,
+    paddingTop: Platform.OS === "android" ? StatusBar.currentHeight ?? 48 : 48,
     paddingBottom: 16,
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   titulo: {
-    color: COLORS.branco,
-    fontSize: 18,
-    fontWeight: "bold",
     flex: 1,
     textAlign: "center",
+    fontSize: 20,
+    fontWeight: "bold",
+    color: COLORS.branco,
   },
-  iconeWrapper: {
-    padding: 4,
-    minWidth: 32,
+  touchArea: {
+    width: 48,
+    height: 48,
+    justifyContent: "center",
     alignItems: "center",
   },
 });

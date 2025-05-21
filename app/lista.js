@@ -1,15 +1,17 @@
 import { useNavigation } from "expo-router";
 import { useLayoutEffect } from "react";
 import {
-  ScrollView,
+  FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
+  useWindowDimensions,
 } from "react-native";
 import GastoItem from "../components/GastoItem";
+import COLORS from "../constants/colors";
 
-// 💰 Dados mockados
+// 💰 Dados simulados
 const GASTOS = [
   { id: 1, data: "25 de abril de 2024", nome: "Supermercado", valor: 50 },
   { id: 2, data: "25 de abril de 2024", nome: "Gasolina", valor: 150 },
@@ -23,64 +25,85 @@ const GASTOS = [
 
 export default function ListaGastos() {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
 
-  // 🔧 Estilo do header da tela
   useLayoutEffect(() => {
     navigation.setOptions({
       title: "Lista de Gastos",
-      headerStyle: {
-        backgroundColor: "#1DB954",
-      },
+      headerStyle: { backgroundColor: COLORS.verde },
       headerTintColor: "#fff",
-      headerTitleStyle: {
-        fontWeight: "bold",
-      },
+      headerTitleStyle: { fontWeight: "bold" },
     });
-  }, [navigation]);
+  }, []);
+
+  const renderItem = ({ item }) => (
+    <GastoItem data={item.data} nome={item.nome} valor={item.valor} />
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Filtros */}
-      <View style={styles.filtros}>
-        <TouchableOpacity
-          style={styles.filtroBotao}
-          accessibilityLabel="Filtrar por categoria"
-          onPress={() => console.log("Filtro de categoria")}
-        >
-          <Text style={styles.filtroTexto}>Categoria ▼</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.filtroBotao}
-          accessibilityLabel="Filtrar por período"
-          onPress={() => console.log("Filtro de período")}
-        >
-          <Text style={styles.filtroTexto}>Período ▼</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <FlatList
+        data={GASTOS}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={renderItem}
+        ListHeaderComponent={
+          <View
+            style={[styles.topo, { paddingHorizontal: width < 360 ? 16 : 24 }]}
+          >
+            {/* Filtros */}
+            <View style={styles.filtros}>
+              <FiltroBotao
+                label="Filtrar por categoria"
+                onPress={() => console.log("Filtro de categoria")}
+              />
+              <FiltroBotao
+                label="Filtrar por período"
+                onPress={() => console.log("Filtro de período")}
+              />
+            </View>
 
-      {/* Totalizador */}
-      <Text style={styles.totalizador}>Total no período: R$ 1.234,00</Text>
+            {/* Totalizador */}
+            <Text
+              style={styles.totalizador}
+              accessibilityRole="summary"
+              accessibilityLabel="Total de gastos no período"
+            >
+              Total no período: R$ 1.234,00
+            </Text>
+          </View>
+        }
+        contentContainerStyle={styles.lista}
+        showsVerticalScrollIndicator={false}
+      />
+    </View>
+  );
+}
 
-      {/* Lista de gastos */}
-      {GASTOS.map((gasto) => (
-        <GastoItem
-          key={gasto.id}
-          data={gasto.data}
-          nome={gasto.nome}
-          valor={gasto.valor}
-        />
-      ))}
-    </ScrollView>
+// 🔄 Filtro reutilizável
+function FiltroBotao({ label, onPress }) {
+  return (
+    <TouchableOpacity
+      style={styles.filtroBotao}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      activeOpacity={0.85}
+    >
+      <Text style={styles.filtroTexto}>
+        {label.replace("Filtrar por ", "")} ▼
+      </Text>
+    </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.branco,
   },
-  content: {
-    padding: 24,
+  topo: {
+    paddingTop: 24,
+    paddingBottom: 12,
   },
   filtros: {
     flexDirection: "row",
@@ -89,19 +112,25 @@ const styles = StyleSheet.create({
   },
   filtroBotao: {
     flex: 1,
-    backgroundColor: "#F0F0F0",
-    paddingVertical: 10,
+    backgroundColor: COLORS.cinzaClaro,
+    paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 8,
+    minHeight: 48,
+    justifyContent: "center",
   },
   filtroTexto: {
     textAlign: "center",
-    fontWeight: "500",
+    fontWeight: "600",
+    color: COLORS.textoPrincipal,
   },
   totalizador: {
     fontWeight: "bold",
-    marginBottom: 16,
     textAlign: "center",
     fontSize: 14,
+    color: COLORS.verde,
+  },
+  lista: {
+    paddingBottom: 32,
   },
 });

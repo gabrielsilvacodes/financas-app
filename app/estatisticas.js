@@ -1,26 +1,27 @@
 import { useNavigation } from "expo-router";
 import { useLayoutEffect, useState } from "react";
 import {
-  Dimensions,
-  Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { LineChart } from "react-native-chart-kit";
 import DropDownPicker from "react-native-dropdown-picker";
 
 import GraficoPizza from "../components/GraficoPizza";
 import LegendaPizza from "../components/LegendaPizza";
+import COLORS from "../constants/colors";
 
 export default function Estatisticas() {
   const navigation = useNavigation();
+  const { width } = useWindowDimensions();
 
   useLayoutEffect(() => {
     navigation.setOptions({
-      title: "Estatística",
-      headerStyle: { backgroundColor: "#1DB954" },
+      title: "Estatísticas",
+      headerStyle: { backgroundColor: COLORS.verde },
       headerTintColor: "#fff",
       headerTitleStyle: { fontWeight: "bold" },
     });
@@ -40,32 +41,36 @@ export default function Estatisticas() {
   };
 
   const dadosPizza = [
-    { name: "Alimentação", amount: 600, color: "#f57c00" },
-    { name: "Transporte", amount: 400, color: "#2ecc71" },
-    { name: "Lazer", amount: 150, color: "#f1c40f" },
-    { name: "Outros", amount: 100, color: "#2980b9" },
+    { name: "Alimentação", amount: 600, color: COLORS.alerta },
+    { name: "Transporte", amount: 400, color: COLORS.transporte },
+    { name: "Lazer", amount: 150, color: COLORS.lazer },
+    { name: "Outros", amount: 100, color: COLORS.outros },
   ];
-
-  const screenWidth = Dimensions.get("window").width - 48;
 
   const chartConfig = {
     backgroundColor: "#fff",
     backgroundGradientFrom: "#fff",
     backgroundGradientTo: "#fff",
     decimalPlaces: 0,
-    color: () => "#1DB954",
+    color: () => COLORS.verde,
     labelColor: () => "#555",
     propsForDots: {
       r: "5",
       strokeWidth: "2",
-      stroke: "#1DB954",
+      stroke: COLORS.verde,
     },
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView
+      contentContainerStyle={[
+        styles.container,
+        { paddingHorizontal: width < 360 ? 16 : 24 },
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Mês Dropdown */}
-      <View style={{ zIndex: 1000 }}>
+      <View style={styles.dropdownWrapper}>
         <DropDownPicker
           open={open}
           value={mes}
@@ -76,53 +81,68 @@ export default function Estatisticas() {
           placeholder="Selecione o mês"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
+          accessibilityLabel="Selecionar mês para análise"
         />
       </View>
 
       {/* Gráfico de Linha */}
-      <Text style={styles.subtitulo}>Despesas do mês</Text>
-      <LineChart
-        data={dadosLinha}
-        width={screenWidth}
-        height={200}
-        yAxisLabel="R$ "
-        chartConfig={chartConfig}
-        bezier
-        style={styles.grafico}
-      />
+      <View style={styles.bloco}>
+        <Text style={styles.subtitulo} accessibilityRole="header">
+          Despesas do mês
+        </Text>
+        <LineChart
+          data={dadosLinha}
+          width={width - 48}
+          height={200}
+          yAxisLabel="R$ "
+          chartConfig={chartConfig}
+          bezier
+          style={styles.grafico}
+          accessibilityLabel="Gráfico de linha com histórico mensal de gastos"
+          accessibilityRole="image"
+        />
+      </View>
 
       {/* Gráfico de Pizza + Legenda */}
-      <Text style={[styles.subtitulo, { marginTop: 24 }]}>
-        Total por categoria
-      </Text>
-      <GraficoPizza dados={dadosPizza} />
-      <LegendaPizza dados={dadosPizza} />
+      <View style={styles.bloco}>
+        <Text style={styles.subtitulo} accessibilityRole="header">
+          Distribuição por categoria
+        </Text>
+        <GraficoPizza dados={dadosPizza} />
+        <LegendaPizza dados={dadosPizza} />
+      </View>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
-    backgroundColor: "#fff",
+    paddingTop: 24,
+    paddingBottom: 40,
+    backgroundColor: COLORS.branco,
+  },
+  dropdownWrapper: {
+    zIndex: 1000,
+    marginBottom: 24,
   },
   dropdown: {
-    borderColor: "#ccc",
+    borderColor: COLORS.borda,
     minHeight: 48,
-    marginBottom: Platform.OS === "android" ? 8 : 24,
   },
   dropdownContainer: {
-    borderColor: "#ccc",
-    zIndex: 1000,
+    borderColor: COLORS.borda,
+  },
+  bloco: {
+    marginBottom: 32,
   },
   subtitulo: {
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "600",
+    color: COLORS.textoPrincipal,
     marginBottom: 12,
-    color: "#333",
   },
   grafico: {
     borderRadius: 8,
-    marginBottom: 24,
+    marginTop: 8,
   },
 });
