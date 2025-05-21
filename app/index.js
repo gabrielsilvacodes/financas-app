@@ -1,13 +1,11 @@
-import { useNavigation } from "expo-router";
-import { useLayoutEffect } from "react";
 import {
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
   View,
   useWindowDimensions,
 } from "react-native";
-
 import BotaoVerde from "../components/BotaoVerde";
 import CategoriaCard from "../components/CategoriaCard";
 import GraficoPizza from "../components/GraficoPizza";
@@ -17,13 +15,11 @@ import LegendaPizza from "../components/LegendaPizza";
 import { CATEGORIAS } from "../constants/categorias";
 import COLORS from "../constants/colors";
 
+/**
+ * Tela principal (dashboard) com visão geral de gastos.
+ */
 export default function Index() {
-  const navigation = useNavigation();
   const { width } = useWindowDimensions();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({ headerShown: false });
-  }, []);
 
   const dadosPizza = [
     { name: "Alimentação", amount: 600, color: COLORS.alerta },
@@ -44,15 +40,13 @@ export default function Index() {
           { paddingHorizontal: width < 360 ? 16 : 24 },
         ]}
         showsVerticalScrollIndicator={false}
+        accessibilityLabel="Tela de visão geral com gráficos e resumo de gastos"
       >
-        {/* Bloco 1 – Total */}
-        <Section
-          title="Total de Gastos"
-          accessibilityLabel="Seção de total de gastos"
-        >
+        <Section title="Total de Gastos">
           <Text
             style={styles.valor}
-            accessibilityLabel={`Valor total gasto: R$ ${valorTotal.toFixed(
+            accessibilityRole="text"
+            accessibilityLabel={`Valor total gasto no período: R$ ${valorTotal.toFixed(
               2
             )}`}
           >
@@ -60,20 +54,17 @@ export default function Index() {
           </Text>
         </Section>
 
-        {/* Bloco 2 – Gráfico + Legenda */}
-        <View style={styles.bloco}>
+        <Section title="Distribuição por categoria">
           <GraficoPizza dados={dadosPizza} />
           <LegendaPizza dados={dadosPizza} />
-        </View>
+        </Section>
 
-        {/* Bloco 3 – Ações */}
         <View style={[styles.bloco, styles.botoes]}>
           <BotaoVerde texto="Adicionar Gasto" href="/adicionar" icone="add" />
           <BotaoVerde texto="Ver Gastos" href="/lista" invertido icone="list" />
         </View>
 
-        {/* Bloco 4 – Categorias */}
-        <Section title="Categorias" accessibilityLabel="Seção de categorias">
+        <Section title="Categorias">
           <View style={styles.listaCategorias}>
             {CATEGORIAS.map((cat) => (
               <CategoriaCard
@@ -82,7 +73,7 @@ export default function Index() {
                 cor={cat.cor}
                 onPress={() => {
                   console.log("Selecionado:", cat.nome);
-                  // Futuro: navegar para lista filtrada por categoria
+                  // Futuro: navegação para gastos por categoria
                 }}
               />
             ))}
@@ -93,16 +84,21 @@ export default function Index() {
   );
 }
 
-// 🔄 Componente auxiliar reutilizável para seções com título
-function Section({ title, accessibilityLabel, children }) {
+/**
+ * Bloco visual reutilizável com título e filhos.
+ */
+function Section({ title, children }) {
   return (
-    <View
-      style={styles.bloco}
-      accessible
-      accessibilityRole="header"
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Text style={styles.subtitulo}>{title}</Text>
+    <View style={styles.bloco}>
+      {title && (
+        <Text
+          style={styles.subtitulo}
+          accessibilityRole="header"
+          accessibilityLabel={`Seção: ${title}`}
+        >
+          {title}
+        </Text>
+      )}
       {children}
     </View>
   );
@@ -114,7 +110,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.branco,
   },
   content: {
-    paddingTop: 24,
+    paddingTop: Platform.select({ ios: 24, android: 16 }),
     paddingBottom: 40,
   },
   bloco: {

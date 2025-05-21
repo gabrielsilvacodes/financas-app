@@ -1,6 +1,6 @@
-import { useNavigation } from "expo-router";
-import { useLayoutEffect, useState } from "react";
+import { useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,25 +12,15 @@ import {
   useWindowDimensions,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
+import Header from "../components/Header";
 import COLORS from "../constants/colors";
 
 export default function AdicionarGasto() {
-  const navigation = useNavigation();
   const { width } = useWindowDimensions();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: "Adicionar Gasto",
-      headerStyle: { backgroundColor: COLORS.verde },
-      headerTintColor: "#fff",
-      headerBackVisible: true,
-      headerTitleStyle: { fontWeight: "bold" },
-    });
-  }, []);
 
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [data, setData] = useState("10/04/2025");
+  const [data, setData] = useState("");
   const [open, setOpen] = useState(false);
   const [categoria, setCategoria] = useState("Alimentação");
   const [categorias, setCategorias] = useState([
@@ -41,8 +31,15 @@ export default function AdicionarGasto() {
   ]);
 
   const handleSalvar = () => {
+    if (!valor || !descricao || !data) {
+      return Alert.alert(
+        "Campos obrigatórios",
+        "Preencha todos os campos marcados com *."
+      );
+    }
+
     console.log({ valor, descricao, categoria, data });
-    // validação futura
+    Alert.alert("Sucesso", "Gasto adicionado com sucesso!");
   };
 
   return (
@@ -50,17 +47,18 @@ export default function AdicionarGasto() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.flex}
     >
+      <Header titulo="Adicionar Gasto" mostrarVoltar />
+
       <ScrollView
         contentContainerStyle={[
           styles.container,
           { paddingHorizontal: width < 360 ? 16 : 24 },
         ]}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
-        {/* Valor */}
-        <Text style={styles.label} accessibilityRole="text">
-          Valor*
-        </Text>
+        {/* VALOR */}
+        <Text style={styles.label}>Valor*</Text>
         <View style={styles.valorWrapper}>
           <Text style={styles.prefixo}>R$</Text>
           <TextInput
@@ -70,22 +68,26 @@ export default function AdicionarGasto() {
             returnKeyType="next"
             value={valor}
             onChangeText={setValor}
-            accessibilityLabel="Campo de valor em reais"
+            blurOnSubmit={false}
+            accessibilityLabel="Campo de valor"
+            accessibilityHint="Informe o valor do gasto"
           />
         </View>
 
-        {/* Descrição */}
+        {/* DESCRIÇÃO */}
         <Text style={styles.label}>Descrição*</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ex: Farmácia, padaria, gasolina..."
+          placeholder="Ex: Farmácia, Padaria..."
           value={descricao}
           onChangeText={setDescricao}
           returnKeyType="next"
-          accessibilityLabel="Campo de descrição do gasto"
+          blurOnSubmit={false}
+          accessibilityLabel="Campo de descrição"
+          accessibilityHint="Informe o que foi comprado"
         />
 
-        {/* Categoria */}
+        {/* CATEGORIA */}
         <Text style={styles.label}>Categoria*</Text>
         <DropDownPicker
           open={open}
@@ -98,10 +100,11 @@ export default function AdicionarGasto() {
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
           zIndex={1000}
-          accessibilityLabel="Campo de seleção de categoria"
+          accessibilityLabel="Campo de categoria"
+          accessibilityHint="Escolha uma categoria para o gasto"
         />
 
-        {/* Data */}
+        {/* DATA */}
         <Text style={styles.label}>Data*</Text>
         <TextInput
           style={styles.input}
@@ -109,15 +112,17 @@ export default function AdicionarGasto() {
           value={data}
           onChangeText={setData}
           returnKeyType="done"
-          accessibilityLabel="Campo de data do gasto"
+          accessibilityLabel="Campo de data"
+          accessibilityHint="Informe a data do gasto"
         />
 
-        {/* Botão */}
+        {/* BOTÃO */}
         <TouchableOpacity
           style={styles.botao}
           onPress={handleSalvar}
           accessibilityRole="button"
           accessibilityLabel="Salvar gasto"
+          accessibilityHint="Toque para salvar o novo gasto"
         >
           <Text style={styles.botaoTexto}>Salvar</Text>
         </TouchableOpacity>

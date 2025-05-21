@@ -1,5 +1,5 @@
-import { useNavigation } from "expo-router";
-import { useLayoutEffect, useState } from "react";
+// app/estatisticas.js
+import { useMemo, useState } from "react";
 import {
   ScrollView,
   StyleSheet,
@@ -11,21 +11,12 @@ import { LineChart } from "react-native-chart-kit";
 import DropDownPicker from "react-native-dropdown-picker";
 
 import GraficoPizza from "../components/GraficoPizza";
+import Header from "../components/Header";
 import LegendaPizza from "../components/LegendaPizza";
 import COLORS from "../constants/colors";
 
 export default function Estatisticas() {
-  const navigation = useNavigation();
   const { width } = useWindowDimensions();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: "Estatísticas",
-      headerStyle: { backgroundColor: COLORS.verde },
-      headerTintColor: "#fff",
-      headerTitleStyle: { fontWeight: "bold" },
-    });
-  }, []);
 
   const [open, setOpen] = useState(false);
   const [mes, setMes] = useState("Abril 2025");
@@ -35,17 +26,23 @@ export default function Estatisticas() {
     { label: "Fevereiro 2025", value: "Fevereiro 2025" },
   ]);
 
-  const dadosLinha = {
-    labels: ["Dez", "Jan", "Fev", "Mar", "Abr"],
-    datasets: [{ data: [500, 2000, 1000, 1700, 2500] }],
-  };
+  const dadosLinha = useMemo(
+    () => ({
+      labels: ["Dez", "Jan", "Fev", "Mar", "Abr"],
+      datasets: [{ data: [500, 2000, 1000, 1700, 2500] }],
+    }),
+    []
+  );
 
-  const dadosPizza = [
-    { name: "Alimentação", amount: 600, color: COLORS.alerta },
-    { name: "Transporte", amount: 400, color: COLORS.transporte },
-    { name: "Lazer", amount: 150, color: COLORS.lazer },
-    { name: "Outros", amount: 100, color: COLORS.outros },
-  ];
+  const dadosPizza = useMemo(
+    () => [
+      { name: "Alimentação", amount: 600, color: COLORS.alerta },
+      { name: "Transporte", amount: 400, color: COLORS.transporte },
+      { name: "Lazer", amount: 150, color: COLORS.lazer },
+      { name: "Outros", amount: 100, color: COLORS.outros },
+    ],
+    []
+  );
 
   const chartConfig = {
     backgroundColor: "#fff",
@@ -62,64 +59,84 @@ export default function Estatisticas() {
   };
 
   return (
-    <ScrollView
-      contentContainerStyle={[
-        styles.container,
-        { paddingHorizontal: width < 360 ? 16 : 24 },
-      ]}
-      showsVerticalScrollIndicator={false}
+    <View style={styles.container}>
+      <Header titulo="Estatísticas" mostrarVoltar />
+
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingHorizontal: width < 360 ? 16 : 24 },
+        ]}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Filtro de Mês */}
+        <View style={styles.dropdownWrapper}>
+          <DropDownPicker
+            open={open}
+            value={mes}
+            items={meses}
+            setOpen={setOpen}
+            setValue={setMes}
+            setItems={setMeses}
+            placeholder="Selecione o mês"
+            style={styles.dropdown}
+            dropDownContainerStyle={styles.dropdownContainer}
+            accessibilityLabel="Filtro de mês"
+          />
+        </View>
+
+        {/* Gráfico de Linha */}
+        <Section title="Despesas do mês" label="Seção de despesas mensais">
+          <LineChart
+            data={dadosLinha}
+            width={width - 48}
+            height={200}
+            yAxisLabel="R$ "
+            chartConfig={chartConfig}
+            bezier
+            style={styles.grafico}
+            accessibilityLabel="Gráfico de linha com a evolução das despesas"
+            accessibilityRole="image"
+          />
+        </Section>
+
+        {/* Gráfico de Pizza + Legenda */}
+        <Section
+          title="Distribuição por categoria"
+          label="Seção de distribuição de despesas por categoria"
+        >
+          <GraficoPizza dados={dadosPizza} titulo={null} />
+          <LegendaPizza dados={dadosPizza} />
+        </Section>
+      </ScrollView>
+    </View>
+  );
+}
+
+// Componente de seção reutilizável
+function Section({ title, label, children }) {
+  return (
+    <View
+      style={styles.bloco}
+      accessible
+      accessibilityRole="header"
+      accessibilityLabel={label}
     >
-      {/* Mês Dropdown */}
-      <View style={styles.dropdownWrapper}>
-        <DropDownPicker
-          open={open}
-          value={mes}
-          items={meses}
-          setOpen={setOpen}
-          setValue={setMes}
-          setItems={setMeses}
-          placeholder="Selecione o mês"
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownContainer}
-          accessibilityLabel="Selecionar mês para análise"
-        />
-      </View>
-
-      {/* Gráfico de Linha */}
-      <View style={styles.bloco}>
-        <Text style={styles.subtitulo} accessibilityRole="header">
-          Despesas do mês
-        </Text>
-        <LineChart
-          data={dadosLinha}
-          width={width - 48}
-          height={200}
-          yAxisLabel="R$ "
-          chartConfig={chartConfig}
-          bezier
-          style={styles.grafico}
-          accessibilityLabel="Gráfico de linha com histórico mensal de gastos"
-          accessibilityRole="image"
-        />
-      </View>
-
-      {/* Gráfico de Pizza + Legenda */}
-      <View style={styles.bloco}>
-        <Text style={styles.subtitulo} accessibilityRole="header">
-          Distribuição por categoria
-        </Text>
-        <GraficoPizza dados={dadosPizza} />
-        <LegendaPizza dados={dadosPizza} />
-      </View>
-    </ScrollView>
+      <Text style={styles.subtitulo}>{title}</Text>
+      {children}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+    backgroundColor: COLORS.branco,
+  },
+  content: {
     paddingTop: 24,
     paddingBottom: 40,
-    backgroundColor: COLORS.branco,
   },
   dropdownWrapper: {
     zIndex: 1000,
@@ -128,9 +145,11 @@ const styles = StyleSheet.create({
   dropdown: {
     borderColor: COLORS.borda,
     minHeight: 48,
+    borderRadius: 6,
   },
   dropdownContainer: {
     borderColor: COLORS.borda,
+    borderRadius: 6,
   },
   bloco: {
     marginBottom: 32,

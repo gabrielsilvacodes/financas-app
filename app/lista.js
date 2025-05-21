@@ -1,14 +1,16 @@
-import { useNavigation } from "expo-router";
-import { useLayoutEffect } from "react";
+// app/lista.js
+import { useMemo } from "react";
 import {
   FlatList,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
   useWindowDimensions,
+  View,
 } from "react-native";
+
 import GastoItem from "../components/GastoItem";
+import Header from "../components/Header";
 import COLORS from "../constants/colors";
 
 // 💰 Dados simulados
@@ -24,28 +26,22 @@ const GASTOS = [
 ];
 
 export default function ListaGastos() {
-  const navigation = useNavigation();
   const { width } = useWindowDimensions();
-
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: "Lista de Gastos",
-      headerStyle: { backgroundColor: COLORS.verde },
-      headerTintColor: "#fff",
-      headerTitleStyle: { fontWeight: "bold" },
-    });
-  }, []);
-
-  const renderItem = ({ item }) => (
-    <GastoItem data={item.data} nome={item.nome} valor={item.valor} />
+  const total = useMemo(
+    () => GASTOS.reduce((acc, item) => acc + item.valor, 0).toFixed(2),
+    []
   );
 
   return (
     <View style={styles.container}>
+      <Header titulo="Lista de Gastos" mostrarVoltar />
+
       <FlatList
         data={GASTOS}
         keyExtractor={(item) => item.id.toString()}
-        renderItem={renderItem}
+        renderItem={({ item }) => (
+          <GastoItem data={item.data} nome={item.nome} valor={item.valor} />
+        )}
         ListHeaderComponent={
           <View
             style={[styles.topo, { paddingHorizontal: width < 360 ? 16 : 24 }]}
@@ -53,45 +49,54 @@ export default function ListaGastos() {
             {/* Filtros */}
             <View style={styles.filtros}>
               <FiltroBotao
-                label="Filtrar por categoria"
-                onPress={() => console.log("Filtro de categoria")}
+                texto="Categoria"
+                onPress={() => console.log("Filtrar por categoria")}
               />
               <FiltroBotao
-                label="Filtrar por período"
-                onPress={() => console.log("Filtro de período")}
+                texto="Período"
+                onPress={() => console.log("Filtrar por período")}
               />
             </View>
 
             {/* Totalizador */}
             <Text
               style={styles.totalizador}
-              accessibilityRole="summary"
-              accessibilityLabel="Total de gastos no período"
+              accessibilityRole="text"
+              accessibilityLabel={`Valor total dos gastos no período: R$ ${total}`}
             >
-              Total no período: R$ 1.234,00
+              Total no período: R$ {total}
             </Text>
           </View>
         }
-        contentContainerStyle={styles.lista}
+        ListEmptyComponent={
+          <Text style={styles.semDados} accessibilityRole="text">
+            Nenhum gasto registrado.
+          </Text>
+        }
+        contentContainerStyle={[
+          styles.lista,
+          { paddingHorizontal: width < 360 ? 16 : 24 },
+        ]}
+        initialNumToRender={6}
+        removeClippedSubviews
         showsVerticalScrollIndicator={false}
       />
     </View>
   );
 }
 
-// 🔄 Filtro reutilizável
-function FiltroBotao({ label, onPress }) {
+// 🔄 Botão reutilizável de filtro
+function FiltroBotao({ texto, onPress }) {
   return (
     <TouchableOpacity
       style={styles.filtroBotao}
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={`Filtrar por ${texto}`}
+      accessibilityHint={`Filtrar os gastos por ${texto.toLowerCase()}`}
       activeOpacity={0.85}
     >
-      <Text style={styles.filtroTexto}>
-        {label.replace("Filtrar por ", "")} ▼
-      </Text>
+      <Text style={styles.filtroTexto}>{texto} ▼</Text>
     </TouchableOpacity>
   );
 }
@@ -122,6 +127,7 @@ const styles = StyleSheet.create({
   filtroTexto: {
     textAlign: "center",
     fontWeight: "600",
+    fontSize: 15,
     color: COLORS.textoPrincipal,
   },
   totalizador: {
@@ -132,5 +138,11 @@ const styles = StyleSheet.create({
   },
   lista: {
     paddingBottom: 32,
+  },
+  semDados: {
+    textAlign: "center",
+    color: COLORS.cinzaTexto,
+    fontSize: 16,
+    marginTop: 40,
   },
 });
