@@ -12,12 +12,15 @@ import {
 import COLORS from "../constants/colors";
 
 /**
- * Header global reutilizável com título centralizado e botões nas laterais.
+ * Header global reutilizável com título centralizado e ícones laterais.
+ * Suporta botão de voltar, menu ou estatísticas.
  */
 export default function Header({
   titulo = "Título",
   mostrarVoltar = false,
   mostrarEstatisticas = true,
+  iconeDireita = "stats-chart",
+  onPressDireita = null,
 }) {
   const router = useRouter();
 
@@ -25,12 +28,14 @@ export default function Header({
   const handleAbrirMenu = () => console.log("Menu aberto");
   const handleAbrirEstatisticas = () => router.push("/estatisticas");
 
+  const acaoDireita = onPressDireita || handleAbrirEstatisticas;
+
   return (
     <View
       style={styles.container}
       accessible
       accessibilityRole="header"
-      accessibilityLabel={`Cabeçalho da página: ${titulo}`}
+      accessibilityLabel={`Cabeçalho da página ${titulo}`}
     >
       {/* Ícone à esquerda */}
       <HeaderIcon
@@ -39,14 +44,13 @@ export default function Header({
         onPress={mostrarVoltar ? handleVoltar : handleAbrirMenu}
       />
 
-      {/* Título Centralizado */}
+      {/* Título */}
       <Text
         style={styles.titulo}
         numberOfLines={1}
         ellipsizeMode="tail"
         accessibilityRole="header"
         accessibilityLabel={titulo}
-        importantForAccessibility="yes"
       >
         {titulo}
       </Text>
@@ -54,9 +58,9 @@ export default function Header({
       {/* Ícone à direita */}
       {mostrarEstatisticas ? (
         <HeaderIcon
-          name="stats-chart"
+          name={iconeDireita}
           label="Ir para estatísticas"
-          onPress={handleAbrirEstatisticas}
+          onPress={acaoDireita}
         />
       ) : (
         <View style={styles.touchArea} />
@@ -66,7 +70,7 @@ export default function Header({
 }
 
 /**
- * Ícone reutilizável do Header com foco em acessibilidade e feedback visual.
+ * Ícone reutilizável do Header com foco em acessibilidade.
  */
 const HeaderIcon = memo(({ name, label, onPress }) => (
   <TouchableOpacity
@@ -84,13 +88,10 @@ const HeaderIcon = memo(({ name, label, onPress }) => (
 const styles = StyleSheet.create({
   container: {
     backgroundColor: COLORS.verde,
-    paddingTop: Platform.select({
-      android: StatusBar.currentHeight + 8,
-      ios: 48,
-      default: 40,
-    }),
-    paddingHorizontal: 16,
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight || 24) + 8 : 48,
     paddingBottom: 12,
+    paddingHorizontal: 16,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",

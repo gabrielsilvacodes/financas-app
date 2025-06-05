@@ -3,7 +3,10 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import COLORS from "../constants/colors";
 
 /**
- * Exibe um cartão de categoria com ícone, cor e título.
+ * Componente visual de cartão de categoria com:
+ * - Indicador colorido
+ * - Nome da categoria
+ * - Ícone de ação
  */
 export default function CategoriaCard({
   nome = "",
@@ -13,20 +16,20 @@ export default function CategoriaCard({
 }) {
   return (
     <TouchableOpacity
-      style={styles.card}
       onPress={onPress}
+      style={styles.card}
       activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={`Categoria: ${nome}`}
-      accessibilityHint="Toque para visualizar os gastos desta categoria"
-      accessible
-      testID={testID}
+      accessibilityHint="Toque para ver os detalhes da categoria"
+      accessible={true}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+      testID={testID}
     >
       <View style={styles.container}>
-        {/* Indicador de cor + Nome */}
-        <View style={styles.esquerda}>
-          <View style={[styles.bolinha, { backgroundColor: cor }]} />
+        {/* 🔵 Indicador de cor + texto */}
+        <View style={styles.info}>
+          <View style={[styles.indicador, { backgroundColor: cor }]} />
           <Text
             style={styles.nomeCategoria}
             numberOfLines={1}
@@ -36,7 +39,7 @@ export default function CategoriaCard({
           </Text>
         </View>
 
-        {/* Ícone de ação */}
+        {/* ➤ Ícone de ação */}
         <Ionicons
           name="chevron-forward"
           size={20}
@@ -66,12 +69,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  esquerda: {
+  info: {
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
   },
-  bolinha: {
+  indicador: {
     width: 10,
     height: 10,
     borderRadius: 5,

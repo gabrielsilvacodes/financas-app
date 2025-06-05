@@ -7,13 +7,14 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import COLORS from "../constants/colors";
 
 /**
- * Componente reutilizável de botão com variações:
- * - cor padrão ou invertida
- * - largura total ou adaptável
- * - tamanho normal ou grande
+ * Botão reutilizável com:
+ * - Variação de cores (normal ou invertido)
+ * - Tamanho (normal ou grande)
+ * - Largura (adaptável ou fullWidth)
  */
 export default function BotaoVerde({
   texto = "Ação",
@@ -21,8 +22,8 @@ export default function BotaoVerde({
   onPress,
   icone,
   invertido = false,
-  size = "normal", // "normal" | "grande"
-  fullWidth = false, // ocupa 100% da largura disponível
+  size = "normal",
+  fullWidth = false,
   testID,
 }) {
   const router = useRouter();
@@ -39,8 +40,12 @@ export default function BotaoVerde({
     fullWidth && styles.fullWidth,
   ];
 
+  const textoStyle = [
+    styles.textoBase,
+    invertido ? styles.textoVerde : styles.textoBranco,
+  ];
+
   const iconColor = invertido ? COLORS.verde : COLORS.branco;
-  const textColor = invertido ? styles.textoVerde : styles.textoBranco;
 
   return (
     <TouchableOpacity
@@ -48,7 +53,8 @@ export default function BotaoVerde({
       style={buttonStyles}
       activeOpacity={0.85}
       accessibilityRole="button"
-      accessibilityLabel={texto}
+      accessibilityLabel={`Botão: ${texto}`}
+      accessible={true}
       testID={testID}
     >
       <View style={styles.conteudo}>
@@ -58,11 +64,11 @@ export default function BotaoVerde({
             size={18}
             color={iconColor}
             style={styles.icone}
-            accessibilityElementsHidden
+            accessibilityElementsHidden={true}
             importantForAccessibility="no"
           />
         )}
-        <Text style={[styles.textoBase, textColor]}>{texto}</Text>
+        <Text style={textoStyle}>{texto}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -78,9 +84,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     ...Platform.select({
-      android: {
-        elevation: 2,
-      },
+      android: { elevation: 2 },
       ios: {
         shadowColor: "#000",
         shadowOpacity: 0.1,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,17 +12,28 @@ import {
   useWindowDimensions,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
-import Header from "../components/Header";
-import COLORS from "../constants/colors";
 
-export default function AdicionarGasto() {
+import COLORS from "../constants/colors";
+import { carregarDados, salvarDados } from "../utils/storage";
+import {
+  criarTransacao,
+  dataEhValida,
+  parseValor,
+  validarCampos,
+} from "../utils/transacaoUtils";
+
+export default function FormTransacao({
+  tipo = "saida",
+  transacaoExistente,
+  onSalvar,
+}) {
   const { width } = useWindowDimensions();
 
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
   const [data, setData] = useState("");
-  const [open, setOpen] = useState(false);
   const [categoria, setCategoria] = useState("Alimentação");
+  const [open, setOpen] = useState(false);
   const [categorias, setCategorias] = useState([
     { label: "Alimentação", value: "Alimentação" },
     { label: "Transporte", value: "Transporte" },
@@ -30,16 +41,58 @@ export default function AdicionarGasto() {
     { label: "Outros", value: "Outros" },
   ]);
 
-  const handleSalvar = () => {
-    if (!valor || !descricao || !data) {
-      return Alert.alert(
-        "Campos obrigatórios",
-        "Preencha todos os campos marcados com *."
-      );
+  useEffect(() => {
+    if (transacaoExistente) {
+      setValor(String(transacaoExistente.valor));
+      setDescricao(transacaoExistente.titulo);
+      setData(new Date(transacaoExistente.data).toLocaleDateString("pt-BR"));
+      setCategoria(transacaoExistente.categoria);
+    }
+  }, [transacaoExistente]);
+
+  const handleSalvar = async () => {
+    if (!validarCampos({ valor, descricao, data })) {
+      Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
+      return;
     }
 
-    console.log({ valor, descricao, categoria, data });
-    Alert.alert("Sucesso", "Gasto adicionado com sucesso!");
+    const valorNumerico = parseValor(valor);
+    if (isNaN(valorNumerico) || valorNumerico <= 0) {
+      Alert.alert("Valor inválido", "Informe um valor válido maior que zero.");
+      return;
+    }
+
+    if (!dataEhValida(data)) {
+      Alert.alert("Data inválida", "Use o formato DD/MM/AAAA.");
+      return;
+    }
+
+    const novaTransacao = criarTransacao({
+      valor,
+      descricao,
+      data,
+      tipo,
+      categoria,
+      idExistente: transacaoExistente?.id,
+    });
+
+    try {
+      const existentes = await carregarDados();
+      const atualizadas = transacaoExistente
+        ? existentes.map((t) =>
+            t.id === transacaoExistente.id ? novaTransacao : t
+          )
+        : [...existentes, novaTransacao];
+
+      await salvarDados(atualizadas);
+      Alert.alert("Sucesso", "Transação salva com sucesso!");
+
+      // ✅ Aqui está o ajuste: passando a transação de volta
+      if (typeof onSalvar === "function") onSalvar(novaTransacao);
+    } catch (e) {
+      console.error("Erro ao salvar transação:", e);
+      Alert.alert("Erro", "Não foi possível salvar os dados.");
+    }
   };
 
   return (
@@ -47,17 +100,13 @@ export default function AdicionarGasto() {
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       style={styles.flex}
     >
-      <Header titulo="Adicionar Gasto" mostrarVoltar />
-
       <ScrollView
         contentContainerStyle={[
           styles.container,
           { paddingHorizontal: width < 360 ? 16 : 24 },
         ]}
         keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
       >
-        {/* VALOR */}
         <Text style={styles.label}>Valor*</Text>
         <View style={styles.valorWrapper}>
           <Text style={styles.prefixo}>R$</Text>
@@ -65,29 +114,19 @@ export default function AdicionarGasto() {
             style={styles.valorInput}
             placeholder="0,00"
             keyboardType="decimal-pad"
-            returnKeyType="next"
             value={valor}
             onChangeText={setValor}
-            blurOnSubmit={false}
-            accessibilityLabel="Campo de valor"
-            accessibilityHint="Informe o valor do gasto"
           />
         </View>
 
-        {/* DESCRIÇÃO */}
         <Text style={styles.label}>Descrição*</Text>
         <TextInput
           style={styles.input}
-          placeholder="Ex: Farmácia, Padaria..."
+          placeholder="Ex: Salário, Supermercado..."
           value={descricao}
           onChangeText={setDescricao}
-          returnKeyType="next"
-          blurOnSubmit={false}
-          accessibilityLabel="Campo de descrição"
-          accessibilityHint="Informe o que foi comprado"
         />
 
-        {/* CATEGORIA */}
         <Text style={styles.label}>Categoria*</Text>
         <DropDownPicker
           open={open}
@@ -96,33 +135,29 @@ export default function AdicionarGasto() {
           setOpen={setOpen}
           setValue={setCategoria}
           setItems={setCategorias}
-          placeholder="Selecione uma categoria"
+          placeholder="Selecione a categoria"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={1000}
-          accessibilityLabel="Campo de categoria"
-          accessibilityHint="Escolha uma categoria para o gasto"
+          zIndex={Platform.OS === "ios" ? 2000 : 1000}
         />
 
-        {/* DATA */}
         <Text style={styles.label}>Data*</Text>
         <TextInput
           style={styles.input}
           placeholder="DD/MM/AAAA"
           value={data}
           onChangeText={setData}
-          returnKeyType="done"
-          accessibilityLabel="Campo de data"
-          accessibilityHint="Informe a data do gasto"
         />
 
-        {/* BOTÃO */}
         <TouchableOpacity
-          style={styles.botao}
+          style={[
+            styles.botao,
+            {
+              backgroundColor:
+                tipo === "entrada" ? COLORS.verde : COLORS.vermelho,
+            },
+          ]}
           onPress={handleSalvar}
-          accessibilityRole="button"
-          accessibilityLabel="Salvar gasto"
-          accessibilityHint="Toque para salvar o novo gasto"
         >
           <Text style={styles.botaoTexto}>Salvar</Text>
         </TouchableOpacity>
@@ -155,7 +190,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    marginBottom: 16,
     backgroundColor: COLORS.branco,
   },
   prefixo: {
@@ -175,9 +209,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 12,
     fontSize: 16,
-    marginBottom: 16,
     backgroundColor: COLORS.branco,
     color: COLORS.textoPrincipal,
+    marginBottom: 8,
   },
   dropdown: {
     borderColor: COLORS.borda,
@@ -191,7 +225,6 @@ const styles = StyleSheet.create({
   },
   botao: {
     marginTop: 24,
-    backgroundColor: COLORS.verde,
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: "center",

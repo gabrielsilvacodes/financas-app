@@ -6,16 +6,18 @@ import COLORS from "../constants/colors";
  * mostrando a cor, categoria e valor de cada item.
  */
 export default function LegendaPizza({ dados = [] }) {
+  if (!dados.length) return null;
+
   return (
     <View
       style={styles.container}
       accessible
       accessibilityRole="summary"
-      accessibilityLabel="Legenda com as categorias e valores do gráfico de pizza"
+      accessibilityLabel="Legenda com categorias e valores do gráfico de pizza"
     >
-      {dados.map((item, index) => (
+      {dados.map((item) => (
         <LegendaItem
-          key={index}
+          key={item.name}
           nome={item.name}
           cor={item.color}
           valor={item.amount}
@@ -29,18 +31,26 @@ export default function LegendaPizza({ dados = [] }) {
  * Item individual da legenda — cor + nome + valor.
  */
 function LegendaItem({ nome, cor, valor }) {
+  const valorFormatado = new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 2,
+  }).format(valor || 0);
+
   return (
     <View
       style={styles.item}
       accessible
       accessibilityRole="text"
-      accessibilityLabel={`Categoria ${nome}, valor R$ ${valor.toFixed(2)}`}
+      accessibilityLabel={`Categoria ${nome}, valor de ${valorFormatado}`}
     >
-      <View style={[styles.bolinha, { backgroundColor: cor }]} />
+      <View
+        style={[styles.bolinha, { backgroundColor: cor || COLORS.outros }]}
+      />
       <Text style={styles.nome} numberOfLines={1} ellipsizeMode="tail">
-        {nome}
+        {nome || "Sem categoria"}
       </Text>
-      <Text style={styles.valor}>R$ {valor.toFixed(2)}</Text>
+      <Text style={styles.valor}>{valorFormatado}</Text>
     </View>
   );
 }
@@ -58,7 +68,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     width: "48%",
     minHeight: 48,
-    paddingRight: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: COLORS.fundoClaro || "#f8f8f8",
   },
   bolinha: {
     width: 12,
@@ -76,5 +89,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.verde,
     textAlign: "right",
+    marginLeft: 8,
   },
 });

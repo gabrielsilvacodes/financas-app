@@ -3,6 +3,9 @@ import { Dimensions, StyleSheet, View } from "react-native";
 import { PieChart } from "react-native-chart-kit";
 import COLORS from "../constants/colors";
 
+/**
+ * Componente de gráfico de pizza que representa a distribuição dos gastos por categoria.
+ */
 const GraficoPizza = ({
   dados = [],
   height = 200,
@@ -10,16 +13,21 @@ const GraficoPizza = ({
 }) => {
   const screenWidth = Dimensions.get("window").width - 48;
 
-  // ✅ Memoriza dados para performance
+  // ✅ Constrói os dados do gráfico somente quando "dados" mudar
   const chartData = useMemo(() => {
     return dados.map((item) => ({
       name: item.name,
-      amount: item.amount,
-      color: item.color,
+      amount: Number(item.amount),
+      color: item.color || COLORS.outros,
       legendFontColor: COLORS.cinzaTexto,
       legendFontSize: 14,
     }));
   }, [dados]);
+
+  // ✅ Verificação para evitar erro em gráfico vazio
+  if (chartData.length === 0) {
+    return null;
+  }
 
   return (
     <View
@@ -35,7 +43,7 @@ const GraficoPizza = ({
         accessor="amount"
         backgroundColor={backgroundColor}
         paddingLeft="20"
-        center={[0, 0]} // Neutro para manter equilíbrio em vários tamanhos
+        center={[0, 0]}
         hasLegend={false}
         chartConfig={{
           color: () => COLORS.textoPrincipal,
