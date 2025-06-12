@@ -20,10 +20,9 @@ function CategoriaCard({
     <TouchableOpacity
       onPress={onPress}
       style={[styles.card, ativo && styles.cardAtivo]}
-      activeOpacity={0.7}
+      activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={`Categoria: ${nomeSeguro}`}
-      accessibilityHint={`Toque para visualizar transações da categoria ${nomeSeguro}`}
+      accessibilityLabel={`Ver transações da categoria ${nomeSeguro}`}
       hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
       testID={testID || `card-${nomeSeguro.toLowerCase().replace(/\s/g, "-")}`}
     >
@@ -56,20 +55,21 @@ const styles = StyleSheet.create({
     borderColor: COLORS.borda,
     borderWidth: 1,
     borderRadius: 12,
-    paddingVertical: 18,
+    paddingVertical: 16,
     paddingHorizontal: 18,
     marginBottom: 14,
     minHeight: 60,
     justifyContent: "center",
     shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 4,
+    shadowOpacity: 0.04,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 3,
     elevation: 1,
+    transition: "all 0.2s ease-in-out",
   },
   cardAtivo: {
     borderColor: COLORS.verde,
-    backgroundColor: "#e6f9f1", // leve highlight (padrão de feedback)
+    backgroundColor: "#e6f9f1",
     elevation: 2,
   },
   container: {
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
   },
   nomeCategoria: {
-    fontSize: 17,
+    fontSize: 16.5,
     fontWeight: "600",
     color: COLORS.textoPrincipal,
     flexShrink: 1,

@@ -19,21 +19,24 @@ export function gerarDadosPizza(transacoes = [], categorias = []) {
 
   return categorias
     .map((cat) => {
+      const chave = (cat?.chave || "").trim().toLowerCase();
+      if (!chave) return null;
+
       const total = transacoes
         .filter(
           (t) =>
             t?.tipo?.toLowerCase() === "saida" &&
-            t?.categoria?.trim().toLowerCase() === cat.nome.trim().toLowerCase()
+            (t?.categoria?.chave || "").trim().toLowerCase() === chave
         )
         .reduce((acc, t) => acc + parseValor(t.valor), 0);
 
       return {
-        name: cat.nome || "Sem nome",
-        population: total, // PieChart requer 'population'
-        color: cat.cor || COLORS.categoria?.outros || COLORS.verde,
+        name: cat.nome || chave,
+        population: total,
+        color: cat.cor || COLORS?.categoria?.outros || COLORS.verde,
       };
     })
-    .filter((item) => item.population > 0);
+    .filter((item) => item && item.population > 0);
 }
 
 /**
@@ -63,7 +66,6 @@ export function gerarResumoMensal(transacoesAgrupadas = {}) {
     return dA - dB;
   });
 
-  // Exibe abreviação amigável: "Abr", "Mai" etc.
   const labels = mesesOrdenados.map((mes) =>
     new Date("01 " + mes)
       .toLocaleString("pt-BR", { month: "short" })
@@ -84,7 +86,7 @@ export function gerarResumoMensal(transacoesAgrupadas = {}) {
 }
 
 /**
- * Gera dados para gráfico de pizza de SAÍDAS de um mês específico (PieChart).
+ * Gera dados para gráfico de pizza de SAÍDAS de um mês específico.
  */
 export function gerarPizzaMes(transacoes = [], mesSelecionado = "") {
   const formatter = new Intl.DateTimeFormat("pt-BR", {
@@ -103,30 +105,26 @@ export function gerarPizzaMes(transacoes = [], mesSelecionado = "") {
 
   const somaPorCategoria = saidasDoMes.reduce((acc, t) => {
     const valor = parseValor(t.valor);
-    if (!t?.categoria || isNaN(valor)) return acc;
-    const chaveCategoria = t.categoria.trim().toLowerCase();
-    acc[chaveCategoria] = (acc[chaveCategoria] || 0) + valor;
+    const chave = t?.categoria?.chave?.trim().toLowerCase();
+    if (!chave || isNaN(valor)) return acc;
+    acc[chave] = (acc[chave] || 0) + valor;
     return acc;
   }, {});
 
-  return Object.entries(somaPorCategoria).map(([categoria, total]) => {
-    // Busca a categoria original com nome casado ignorando case para pegar a cor correta
-    const categoriaOriginal = CATEGORIAS_PADRAO.saida.find(
-      (c) => c.nome.trim().toLowerCase() === categoria
+  return Object.entries(somaPorCategoria).map(([chave, total]) => {
+    const cat = CATEGORIAS_PADRAO.saida.find(
+      (c) => c.chave.trim().toLowerCase() === chave
     );
     return {
-      name: categoriaOriginal?.nome || categoria,
+      name: cat?.nome || chave,
       population: total,
-      color: categoriaOriginal?.cor || COLORS.categoria.outros || COLORS.verde,
+      color: cat?.cor || COLORS.categoria?.outros || COLORS.verde,
     };
   });
 }
 
 /**
  * Gera dados para gráfico de barras com SAÍDAS por categoria em um período.
- * BarChart espera 'amount', não 'population'!
- * @param {Array} transacoes
- * @param {"7dias"|"30dias"|"ano"} periodo
  */
 export function gerarBarrasPorPeriodo(transacoes = [], periodo = "30dias") {
   const hoje = new Date();
@@ -153,20 +151,20 @@ export function gerarBarrasPorPeriodo(transacoes = [], periodo = "30dias") {
 
   const somaPorCategoria = saidas.reduce((acc, t) => {
     const valor = parseValor(t.valor);
-    if (!t?.categoria || isNaN(valor)) return acc;
-    const chaveCategoria = t.categoria.trim().toLowerCase();
-    acc[chaveCategoria] = (acc[chaveCategoria] || 0) + valor;
+    const chave = t?.categoria?.chave?.trim().toLowerCase();
+    if (!chave || isNaN(valor)) return acc;
+    acc[chave] = (acc[chave] || 0) + valor;
     return acc;
   }, {});
 
-  return Object.entries(somaPorCategoria).map(([categoria, total]) => {
-    const categoriaOriginal = CATEGORIAS_PADRAO.saida.find(
-      (c) => c.nome.trim().toLowerCase() === categoria
+  return Object.entries(somaPorCategoria).map(([chave, total]) => {
+    const cat = CATEGORIAS_PADRAO.saida.find(
+      (c) => c.chave.trim().toLowerCase() === chave
     );
     return {
-      name: categoriaOriginal?.nome || categoria,
+      name: cat?.nome || chave,
       amount: total,
-      color: categoriaOriginal?.cor || COLORS.categoria.outros || COLORS.verde,
+      color: cat?.cor || COLORS.categoria?.outros || COLORS.verde,
     };
   });
 }

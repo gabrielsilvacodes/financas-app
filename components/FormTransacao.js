@@ -42,7 +42,6 @@ export default function FormTransacao({
   onSalvar,
 }) {
   const { width } = useWindowDimensions();
-
   const [tipoSelecionado, setTipoSelecionado] = useState(tipo);
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
@@ -54,7 +53,6 @@ export default function FormTransacao({
   const [mostrarPicker, setMostrarPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Carrega categorias padrão + personalizadas
   const carregarCategoriasPersonalizadas = useCallback(async () => {
     try {
       const categoriasPadrao = CATEGORIAS_PADRAO[tipoSelecionado].map(
@@ -64,15 +62,20 @@ export default function FormTransacao({
           cor: cat.cor,
         })
       );
+
       const categoriasSalvas = await carregarCategorias(categoriasPadrao);
+      const categoriasValidas = Array.isArray(categoriasSalvas)
+        ? categoriasSalvas
+        : categoriasPadrao;
 
       const listaFinal = [
-        ...categoriasSalvas.filter((c) => c.value !== OPC_NOVA_CATEGORIA.value),
+        ...categoriasValidas.filter(
+          (c) => c.value !== OPC_NOVA_CATEGORIA.value
+        ),
         OPC_NOVA_CATEGORIA,
       ];
 
       setCategorias(listaFinal);
-
       if (!categoria && listaFinal.length > 0) {
         setCategoria(listaFinal[0].value);
       }
@@ -98,26 +101,22 @@ export default function FormTransacao({
     }
   }, [transacaoExistente]);
 
-  // Adiciona nova categoria
   const adicionarNovaCategoria = async ({ nome, cor }) => {
     const nova = { label: nome, value: nome, cor };
     const novasCategorias = [
       ...categorias.filter((c) => c.value !== OPC_NOVA_CATEGORIA.value),
       nova,
     ];
-
     await salvarCategorias(novasCategorias);
     await carregarCategoriasPersonalizadas();
-    setCategoria(nome); // seleciona a nova categoria automaticamente
+    setCategoria(nome);
     setMostrarModal(false);
   };
 
-  // Handler do dropdown para abrir modal ou selecionar categoria
   const handleCategoriaChange = useCallback((value) => {
     if (value === OPC_NOVA_CATEGORIA.value) {
       setOpen(false);
       setTimeout(() => setMostrarModal(true), 250);
-      // Não seleciona "nova_categoria"
     } else {
       setCategoria(value);
     }
@@ -136,15 +135,18 @@ export default function FormTransacao({
       Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
       return;
     }
+
     const valorNumerico = parseValor(valor);
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
       Alert.alert("Valor inválido", "Informe um valor maior que zero.");
       return;
     }
+
     if (!categoria) {
       Alert.alert("Categoria obrigatória", "Escolha uma categoria.");
       return;
     }
+
     setLoading(true);
 
     const novaTransacao = criarTransacao({
@@ -185,6 +187,7 @@ export default function FormTransacao({
       style={{ flex: 1 }}
     >
       <ScrollView
+        nestedScrollEnabled
         contentContainerStyle={[
           styles.form,
           { padding: width < 360 ? 16 : 24 },
@@ -206,24 +209,12 @@ export default function FormTransacao({
                         ? COLORS.verde
                         : COLORS.vermelho
                       : COLORS.cinzaClaro,
-                  borderTopLeftRadius: t === "entrada" ? 8 : 0,
-                  borderTopRightRadius: t === "saida" ? 8 : 0,
-                  borderBottomLeftRadius: t === "entrada" ? 8 : 0,
-                  borderBottomRightRadius: t === "saida" ? 8 : 0,
-                  borderWidth: tipoSelecionado === t ? 1.5 : 1,
-                  borderColor:
-                    tipoSelecionado === t
-                      ? t === "entrada"
-                        ? COLORS.verdeEscuro
-                        : COLORS.vermelho
-                      : COLORS.borda,
                 },
               ]}
               accessibilityRole="button"
               accessibilityLabel={`Selecionar tipo ${t}`}
               hitSlop={8}
               disabled={loading}
-              testID={`botao-tipo-${t}`}
             >
               <Text
                 style={[
@@ -252,9 +243,7 @@ export default function FormTransacao({
             value={valor}
             onChangeText={setValor}
             style={[styles.input, styles.inputValor]}
-            testID="input-valor"
             editable={!loading}
-            accessibilityLabel="Campo valor"
             placeholderTextColor={COLORS.cinzaTexto}
           />
         </View>
@@ -266,9 +255,7 @@ export default function FormTransacao({
           value={descricao}
           onChangeText={setDescricao}
           style={styles.input}
-          testID="input-descricao"
           editable={!loading}
-          accessibilityLabel="Campo descrição"
           placeholderTextColor={COLORS.cinzaTexto}
           maxLength={40}
         />
@@ -280,7 +267,7 @@ export default function FormTransacao({
           value={categoria === OPC_NOVA_CATEGORIA.value ? null : categoria}
           items={categorias}
           setOpen={setOpen}
-          onChangeValue={handleCategoriaChange} // Essencial!
+          onChangeValue={handleCategoriaChange}
           setItems={setCategorias}
           placeholder="Selecione ou adicione uma categoria"
           style={styles.dropdown}
@@ -299,12 +286,9 @@ export default function FormTransacao({
         {/* Data */}
         <Text style={styles.label}>Data*</Text>
         <TouchableOpacity
-          onPress={() => {
-            if (!mostrarPicker) setMostrarPicker(true);
-          }}
+          onPress={() => setMostrarPicker(true)}
           style={styles.dataBotao}
           disabled={loading}
-          accessibilityLabel="Selecionar data"
         >
           <Text style={styles.dataTexto}>
             {data ? data.toLocaleDateString("pt-BR") : "Selecionar data"}
@@ -325,7 +309,6 @@ export default function FormTransacao({
               <TouchableOpacity
                 style={styles.pickerFechar}
                 onPress={() => setMostrarPicker(false)}
-                disabled={loading}
               >
                 <Text style={styles.pickerFecharTexto}>Concluir</Text>
               </TouchableOpacity>
@@ -352,10 +335,6 @@ export default function FormTransacao({
               opacity: !isFormValido ? 0.65 : 1,
             },
           ]}
-          testID="botao-salvar"
-          accessibilityLabel={
-            transacaoExistente ? "Salvar alterações" : "Salvar transação"
-          }
           disabled={!isFormValido}
         >
           {loading ? (
@@ -372,17 +351,8 @@ export default function FormTransacao({
 }
 
 const styles = StyleSheet.create({
-  form: {
-    paddingBottom: 96,
-    gap: 2,
-  },
-  label: {
-    marginBottom: 5,
-    marginTop: 2,
-    fontWeight: "bold",
-    fontSize: 15,
-    color: COLORS.textoSecundario,
-  },
+  form: { paddingBottom: 96, gap: 2 },
+  label: { marginBottom: 5, marginTop: 2, fontWeight: "bold", fontSize: 15 },
   input: {
     borderWidth: 1,
     borderColor: COLORS.borda,
@@ -392,39 +362,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     backgroundColor: COLORS.branco,
     color: COLORS.textoPrincipal,
-    transitionDuration: "120ms",
   },
-  inputValor: {
-    flex: 1,
-    fontWeight: "bold",
-    fontSize: 19,
-    marginLeft: 6,
-    color: COLORS.textoPrincipal,
-    backgroundColor: COLORS.branco,
-  },
+  inputValor: { flex: 1, fontWeight: "bold", fontSize: 19, marginLeft: 6 },
   valorContainer: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: 16,
-    backgroundColor: COLORS.fundoClaro,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: COLORS.borda,
     paddingHorizontal: 10,
     paddingVertical: 2,
   },
-  prefixo: {
-    fontWeight: "600",
-    fontSize: 16,
-    color: COLORS.cinzaTexto,
-    marginRight: 2,
-  },
+  prefixo: { fontWeight: "600", fontSize: 16, marginRight: 2 },
   tipoContainer: {
     flexDirection: "row",
     marginBottom: 24,
     borderRadius: 8,
     overflow: "hidden",
-    backgroundColor: COLORS.cinzaClaro,
     borderWidth: 1,
     borderColor: COLORS.borda,
   },
@@ -436,25 +391,15 @@ const styles = StyleSheet.create({
     borderRightWidth: 1,
     borderRightColor: COLORS.borda,
   },
-  tipoTexto: {
-    fontWeight: "bold",
-    textAlign: "center",
-    fontSize: 16,
-    letterSpacing: 0.2,
-  },
+  tipoTexto: { fontWeight: "bold", textAlign: "center", fontSize: 16 },
   dropdown: {
     borderRadius: 8,
     borderColor: COLORS.borda,
     marginBottom: 16,
     minHeight: 50,
     backgroundColor: COLORS.branco,
-    fontSize: 16,
   },
-  dropdownContainer: {
-    borderColor: COLORS.borda,
-    borderRadius: 8,
-    zIndex: 1000,
-  },
+  dropdownContainer: { borderColor: COLORS.borda, borderRadius: 8 },
   dataBotao: {
     borderWidth: 1,
     borderColor: COLORS.borda,
@@ -466,10 +411,7 @@ const styles = StyleSheet.create({
     minHeight: 48,
     justifyContent: "center",
   },
-  dataTexto: {
-    fontSize: 15,
-    color: COLORS.textoPrincipal,
-  },
+  dataTexto: { fontSize: 15, color: COLORS.textoPrincipal },
   pickerFechar: {
     alignSelf: "center",
     marginTop: 10,
@@ -478,11 +420,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.verde,
     borderRadius: 7,
   },
-  pickerFecharTexto: {
-    color: COLORS.branco,
-    fontWeight: "bold",
-    fontSize: 15,
-  },
+  pickerFecharTexto: { color: COLORS.branco, fontWeight: "bold", fontSize: 15 },
   botaoSalvar: {
     padding: 16,
     borderRadius: 8,
@@ -497,6 +435,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
     fontSize: 16,
-    letterSpacing: 0.3,
   },
 });

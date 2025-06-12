@@ -11,13 +11,27 @@ import { formataValor } from "../utils/formatacao";
 function GastoItem({ id, data, nome, valor, categoria, tipo }) {
   const router = useRouter();
 
-  const valorNumerico = Number(valor);
+  const valorNumerico = parseFloat(
+    typeof valor === "string" ? valor.replace(",", ".") : valor
+  );
   const valorFormatado = isNaN(valorNumerico)
     ? "R$ 0,00"
     : formataValor(valorNumerico);
 
   const corValor = tipo === "entrada" ? COLORS.verde : COLORS.vermelho;
-  const corFundo = tipo === "entrada" ? COLORS.neutroClaro : COLORS.cinzaClaro; // Sutil para distinguir visualmente
+  const corFundo = tipo === "entrada" ? COLORS.neutroClaro : COLORS.cinzaClaro;
+
+  const nomeSeguro =
+    typeof nome === "string" && nome.trim() !== "" ? nome : "Sem descrição";
+
+  const categoriaSegura =
+    typeof categoria === "string"
+      ? categoria
+      : typeof categoria === "object"
+      ? categoria.value || categoria.nome || null
+      : null;
+
+  const dataSegura = typeof data === "string" ? data : "";
 
   const handleEditar = () => {
     router.push(`/transacoes/editar/${id}`);
@@ -28,9 +42,9 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
       style={[styles.container, { backgroundColor: corFundo }]}
       accessible
       accessibilityRole="listitem"
-      accessibilityLabel={`Transação: ${
-        nome || "sem descrição"
-      }. Valor: ${valorFormatado}. Categoria: ${categoria || "sem categoria"}`}
+      accessibilityLabel={`Transação de ${nomeSeguro} no valor de ${valorFormatado}${
+        categoriaSegura ? `, categoria: ${categoriaSegura}` : ""
+      }`}
       testID={`gasto-item-${id}`}
     >
       {/* Lado esquerdo: título, categoria, data */}
@@ -42,9 +56,10 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
             ellipsizeMode="tail"
             testID="gasto-nome"
           >
-            {nome || "Sem descrição"}
+            {nomeSeguro}
           </Text>
-          {categoria && (
+
+          {categoriaSegura && (
             <View
               style={[
                 styles.badgeCategoria,
@@ -57,14 +72,17 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
                 ellipsizeMode="tail"
                 testID="gasto-categoria"
               >
-                {categoria}
+                {categoriaSegura}
               </Text>
             </View>
           )}
         </View>
-        <Text style={styles.data} testID="gasto-data">
-          {data}
-        </Text>
+
+        {dataSegura ? (
+          <Text style={styles.data} testID="gasto-data">
+            {dataSegura}
+          </Text>
+        ) : null}
       </View>
 
       {/* Lado direito: valor e botão editar */}
@@ -75,7 +93,7 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
         <TouchableOpacity
           onPress={handleEditar}
           style={styles.botaoEditar}
-          accessibilityLabel={`Editar transação de ${nome || "sem descrição"}`}
+          accessibilityLabel={`Editar transação de ${nomeSeguro}`}
           accessibilityRole="button"
           activeOpacity={0.72}
           hitSlop={12}
@@ -112,7 +130,7 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     paddingRight: 10,
-    minWidth: 0, // Garante truncagem de texto
+    minWidth: 0,
   },
   topo: {
     flexDirection: "row",

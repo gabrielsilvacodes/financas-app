@@ -6,21 +6,20 @@ import COLORS from "../constants/colors";
 export default function Layout() {
   return (
     <View style={styles.root} testID="layout-root">
-      {/* StatusBar sempre overlay para fundo "clean" */}
+      {/* StatusBar com fundo transparente para integração fluida */}
       <StatusBar
         style={Platform.OS === "ios" ? "dark" : "light"}
-        backgroundColor="transparent"
         translucent
+        backgroundColor="transparent"
       />
-      <SafeAreaView style={styles.safe} edges={["top", "left", "right"]}>
+
+      <SafeAreaView style={styles.safeArea} edges={["top", "left", "right"]}>
         <Stack
           screenOptions={{
             headerShown: false,
             animation: "slide_from_right",
             gestureEnabled: true,
-            contentStyle: {
-              backgroundColor: COLORS.neutroClaro || "#F5F5F5",
-            },
+            contentStyle: styles.contentStyle,
           }}
           testID="layout-stack"
         />
@@ -32,9 +31,15 @@ export default function Layout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: COLORS.neutroClaro || "#F5F5F5",
+    backgroundColor: COLORS.neutroClaro ?? "#F5F5F5",
   },
-  safe: {
+  safeArea: {
     flex: 1,
+    paddingBottom: Platform.OS === "android" ? 0 : 4,
+  },
+  contentStyle: {
+    backgroundColor: COLORS.neutroClaro ?? "#F5F5F5",
+    paddingHorizontal: 0,
+    paddingTop: 0,
   },
 });

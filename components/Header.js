@@ -13,11 +13,11 @@ import {
 import COLORS from "../constants/colors";
 
 /**
- * Cabeçalho global harmonioso para apps mobile:
- * - Respeita Safe Area
- * - Centralização real do título (visual e semântico)
- * - Ícones com área touch generosa
- * - Sombra e padding elegantes
+ * Cabeçalho global refinado com:
+ * - Safe Area real
+ * - Título centralizado com equilíbrio visual
+ * - Ícones bem espaçados
+ * - Padding proporcional e sombra leve
  */
 export default function Header({
   titulo = "Título",
@@ -32,10 +32,10 @@ export default function Header({
 }) {
   const router = useRouter();
 
-  // Funções de ação
   const handleVoltar = () => router.back();
   const handleAbrirMenu = () => console.log("📂 Menu solicitado");
   const handleAbrirEstatisticas = () => router.push("/estatisticas");
+
   const acaoDireita = onPressDireita || handleAbrirEstatisticas;
 
   return (
@@ -54,7 +54,7 @@ export default function Header({
         {/* Ícone à esquerda */}
         <HeaderIcon
           name={mostrarVoltar ? "arrow-back" : "menu"}
-          label={mostrarVoltar ? "Voltar para a tela anterior" : "Abrir menu"}
+          label={mostrarVoltar ? "Voltar" : "Menu"}
           onPress={mostrarVoltar ? handleVoltar : handleAbrirMenu}
           corIcone={corIcone}
         />
@@ -65,14 +65,12 @@ export default function Header({
             style={[styles.titulo, { color: corTitulo }]}
             numberOfLines={1}
             ellipsizeMode="tail"
-            accessibilityRole="text"
-            accessibilityLabel={`Título: ${titulo}`}
           >
             {titulo}
           </Text>
         </View>
 
-        {/* Ícone à direita ou espaço vazio */}
+        {/* Ícone à direita */}
         {mostrarEstatisticas ? (
           <HeaderIcon
             name={iconeDireita}
@@ -88,47 +86,42 @@ export default function Header({
   );
 }
 
-const HeaderIcon = memo(
-  ({ name, label, onPress, corIcone = COLORS.branco }) => (
-    <TouchableOpacity
-      onPress={onPress}
-      accessibilityLabel={label}
-      accessibilityHint={label}
-      accessibilityRole="button"
-      activeOpacity={0.7}
-      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
-      style={styles.touchArea}
-    >
-      <Ionicons name={name} size={26} color={corIcone} />
-    </TouchableOpacity>
-  )
-);
+const HeaderIcon = memo(({ name, label, onPress, corIcone }) => (
+  <TouchableOpacity
+    onPress={onPress}
+    accessibilityRole="button"
+    accessibilityLabel={label}
+    activeOpacity={0.7}
+    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+    style={styles.touchArea}
+  >
+    <Ionicons name={name} size={26} color={corIcone} />
+  </TouchableOpacity>
+));
 
 const styles = StyleSheet.create({
   safe: {
-    // Garante que o Header respeita a barra de status (notch/topo)
-    // Pode customizar para fundo claro/escuro
+    backgroundColor: COLORS.verde,
   },
   container: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    minHeight: 62,
-    paddingHorizontal: 18,
-    paddingBottom: 8,
+    minHeight: 60,
+    paddingHorizontal: 16,
     paddingTop: Platform.select({
-      android: (StatusBar.currentHeight ?? 20) * 0.3 + 12,
-      ios: 10,
-      default: 12,
+      ios: 12,
+      android: (StatusBar.currentHeight ?? 20) * 0.2 + 10,
     }),
+    paddingBottom: 10,
     zIndex: 10,
   },
   sombra: {
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.07,
+    shadowOffset: { width: 0, height: 1.5 },
+    shadowOpacity: 0.06,
     shadowRadius: 6,
-    elevation: 5,
+    elevation: 4,
   },
   tituloWrapper: {
     flex: 1,
@@ -137,15 +130,15 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   titulo: {
-    fontSize: 21,
-    fontWeight: "bold",
-    letterSpacing: 0.2,
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.3,
     textAlign: "center",
     maxWidth: "90%",
   },
   touchArea: {
-    width: 48,
-    height: 48,
+    width: 44,
+    height: 44,
     alignItems: "center",
     justifyContent: "center",
   },

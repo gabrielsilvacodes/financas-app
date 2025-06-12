@@ -5,7 +5,6 @@ import { formataValor } from "../utils/formatacao";
 
 /**
  * Legenda associada ao gráfico de pizza.
- * Aceita props.dados como [{ name, amount/population, color }]
  */
 export default function LegendaPizza({ dados = [] }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
@@ -31,11 +30,7 @@ export default function LegendaPizza({ dados = [] }) {
   );
 }
 
-/**
- * Item individual da legenda: cor, nome e valor.
- */
 function LegendaItem({ nome, cor, valor }) {
-  // Compatível com amount ou population
   const valorNumerico = Number(valor) || 0;
   const valorFormatado = useMemo(
     () => formataValor(valorNumerico),
@@ -46,28 +41,28 @@ function LegendaItem({ nome, cor, valor }) {
     <View
       style={styles.item}
       accessible
-      accessibilityRole="text"
-      accessibilityLabel={`Categoria ${
-        nome || "sem nome"
-      }, valor ${valorFormatado}`}
       testID={`legenda-item-${(nome || "sem-nome")
         .toLowerCase()
         .replace(/\s+/g, "-")}`}
     >
-      <View
-        style={[
-          styles.bolinha,
-          { backgroundColor: cor || COLORS.categoria?.outros || COLORS.verde },
-        ]}
-      />
-      <Text
-        style={styles.nome}
-        numberOfLines={1}
-        ellipsizeMode="tail"
-        testID="legenda-nome"
-      >
-        {nome || "Sem categoria"}
-      </Text>
+      <View style={styles.left}>
+        <View
+          style={[
+            styles.bolinha,
+            {
+              backgroundColor: cor || COLORS.categoria?.outros || COLORS.verde,
+            },
+          ]}
+        />
+        <Text
+          style={styles.nome}
+          numberOfLines={1}
+          ellipsizeMode="tail"
+          testID="legenda-nome"
+        >
+          {nome || "Sem categoria"}
+        </Text>
+      </View>
       <Text style={styles.valor}>{valorFormatado}</Text>
     </View>
   );
@@ -75,52 +70,53 @@ function LegendaItem({ nome, cor, valor }) {
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
+    flexDirection: "column",
     flexWrap: "wrap",
-    justifyContent: "flex-start",
     gap: 12,
+    marginTop: 8,
     marginBottom: 24,
   },
   item: {
     flexDirection: "row",
+    justifyContent: "space-between",
     alignItems: "center",
-    width: "48%",
-    minWidth: 150,
-    maxWidth: 230,
-    marginBottom: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    backgroundColor: COLORS.neutroClaro,
-    borderColor: COLORS.borda,
-    borderWidth: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: COLORS.branco,
     borderRadius: 12,
-    elevation: 1,
+    borderWidth: 1,
+    borderColor: COLORS.borda,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 2,
+    elevation: 1,
+  },
+  left: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    paddingRight: 8,
   },
   bolinha: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    marginRight: 12,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    marginRight: 10,
     borderWidth: 1,
     borderColor: COLORS.borda,
-    alignSelf: "center",
   },
   nome: {
-    flex: 1,
+    flexShrink: 1,
     fontSize: 15,
     color: COLORS.textoPrincipal,
     fontWeight: "500",
-    paddingRight: 8,
   },
   valor: {
     fontSize: 15,
-    fontWeight: "bold",
-    color: COLORS.verdeEscuro ?? COLORS.verde,
+    fontWeight: "600",
+    color: COLORS.textoSecundario,
+    minWidth: 72,
     textAlign: "right",
-    minWidth: 64,
   },
 });

@@ -26,7 +26,6 @@ export default function ModalNovaCategoria({
   const [cor, setCor] = useState(COLORS.verde);
   const [mostrarPicker, setMostrarPicker] = useState(false);
 
-  // Reseta estado ao fechar modal
   useEffect(() => {
     if (!visivel) {
       setNome("");
@@ -35,14 +34,13 @@ export default function ModalNovaCategoria({
     }
   }, [visivel]);
 
-  // Salva a categoria no AsyncStorage, evitando duplicatas pelo nome
   async function salvarCategoriaLocal(novaCategoria) {
     try {
       const armazenadas = await AsyncStorage.getItem(CATEGORIAS_KEY);
       const categorias = armazenadas ? JSON.parse(armazenadas) : [];
 
       const categoriasFiltradas = categorias.filter(
-        (cat) => cat.nome.toLowerCase() !== novaCategoria.nome.toLowerCase()
+        (cat) => cat.chave !== novaCategoria.chave
       );
 
       const atualizadas = [...categoriasFiltradas, novaCategoria];
@@ -53,18 +51,35 @@ export default function ModalNovaCategoria({
     }
   }
 
-  // Handler para salvar: valida, salva local e comunica pai via onSalvar
   const handleSalvar = async () => {
     const nomeLimpo = nome.trim();
     if (!nomeLimpo) {
       Alert.alert("Atenção", "Informe o nome da categoria.");
       return;
     }
-    const novaCategoria = { nome: nomeLimpo, cor, tipo };
 
-    await salvarCategoriaLocal(novaCategoria); // garante salvar antes de fechar e comunicar
-    onSalvar(novaCategoria); // passa a categoria para o componente pai atualizar lista
-    onFechar();
+    const chave = nomeLimpo.toLowerCase().replace(/\s+/g, "_");
+
+    try {
+      const armazenadas = await AsyncStorage.getItem(CATEGORIAS_KEY);
+      const categorias = armazenadas ? JSON.parse(armazenadas) : [];
+
+      const duplicada = categorias.some(
+        (cat) => cat.chave?.toLowerCase() === chave
+      );
+      if (duplicada) {
+        Alert.alert("Duplicado", "Já existe uma categoria com esse nome.");
+        return;
+      }
+
+      const novaCategoria = { chave, nome: nomeLimpo, cor, tipo };
+      await salvarCategoriaLocal(novaCategoria);
+      onSalvar(novaCategoria);
+      onFechar();
+    } catch (e) {
+      console.warn("Erro ao verificar duplicatas:", e);
+      Alert.alert("Erro", "Erro ao verificar duplicações.");
+    }
   };
 
   return (

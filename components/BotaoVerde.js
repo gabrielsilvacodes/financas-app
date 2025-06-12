@@ -12,7 +12,7 @@ import {
 import COLORS from "../constants/colors";
 
 /**
- * Botão verde versátil com ícone, loading e feedback visual.
+ * Botão verde reutilizável com melhorias visuais.
  */
 export default function BotaoVerde({
   texto = "Ação",
@@ -25,7 +25,7 @@ export default function BotaoVerde({
   testID,
   loading = false,
   disabled = false,
-  style, // permite customização extra
+  style,
 }) {
   const router = useRouter();
 
@@ -91,25 +91,24 @@ export default function BotaoVerde({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 50,
-    minWidth: 110,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    borderRadius: 10,
     flexDirection: "row",
-    justifyContent: "center",
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: 48,
+    minWidth: 120,
+    paddingHorizontal: 22,
+    paddingVertical: 12,
+    borderRadius: 12,
     marginVertical: 4,
     ...Platform.select({
-      android: { elevation: 2 },
+      android: { elevation: 3 },
       ios: {
         shadowColor: "#000",
-        shadowOpacity: 0.11,
+        shadowOpacity: 0.06,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 4,
       },
     }),
-    transitionDuration: "150ms", // para web (opcional)
   },
   verde: {
     backgroundColor: COLORS.verde,
@@ -117,31 +116,30 @@ const styles = StyleSheet.create({
   },
   inverso: {
     backgroundColor: COLORS.branco,
-    borderWidth: 1.7,
+    borderWidth: 1.5,
     borderColor: COLORS.verde,
   },
   fullWidth: {
     width: "100%",
   },
   grande: {
-    paddingVertical: 18,
-    minHeight: 60,
+    paddingVertical: 16,
+    minHeight: 58,
   },
   conteudo: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: 0, // permite texto quebrar corretamente
-    flex: 1,
+    gap: 10,
+    flexShrink: 1,
   },
   icone: {
     marginRight: 8,
-    alignSelf: "center",
   },
   textoBase: {
     fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.2,
+    fontWeight: "600",
+    letterSpacing: 0.3,
     textAlign: "center",
     flexShrink: 1,
   },
@@ -152,7 +150,7 @@ const styles = StyleSheet.create({
     color: COLORS.verde,
   },
   disabled: {
-    opacity: 0.58,
+    opacity: 0.5,
   },
   textoDesabilitado: {
     color: COLORS.cinzaTexto,

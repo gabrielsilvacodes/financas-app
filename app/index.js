@@ -99,7 +99,7 @@ export default function Dashboard() {
               { paddingHorizontal: width < 360 ? 16 : 24 },
             ]}
           >
-            {isEmpty && (
+            {isEmpty ? (
               <View style={styles.emptyWrapper}>
                 <EmptyState
                   titulo="Seu app está pronto!"
@@ -107,9 +107,7 @@ export default function Dashboard() {
                   icone="wallet-outline"
                 />
               </View>
-            )}
-
-            {!isEmpty && (
+            ) : (
               <>
                 <Section title="Saldo Total">
                   <View style={styles.cardBox}>
@@ -130,8 +128,7 @@ export default function Dashboard() {
 
                 <Section title="Distribuição por categoria">
                   <View style={styles.cardBox}>
-                    {Array.isArray(dadosPizza) &&
-                    dadosPizza.filter((x) => x.population > 0).length > 0 ? (
+                    {dadosPizza?.length > 0 ? (
                       <>
                         <GraficoPizza dados={dadosPizza} />
                         <LegendaPizza dados={dadosPizza} />
@@ -155,21 +152,21 @@ export default function Dashboard() {
                     testID="botao-transacoes"
                   />
                 </View>
+
                 <Section title="Categorias" />
               </>
             )}
           </View>
         }
-        renderItem={({ item, index }) => (
+        renderItem={({ item }) => (
           <View style={{ paddingHorizontal: width < 360 ? 16 : 24 }}>
             <CategoriaCard
-              key={`${item?.chave || item?.nome}-${index}`}
               nome={item.nome}
               cor={item.cor || COLORS.categoria?.outros}
               onPress={() =>
                 router.push({
                   pathname: "/transacoes/lista",
-                  params: { categoria: item.nome },
+                  params: { categoria: item.chave },
                 })
               }
             />
@@ -190,6 +187,7 @@ export default function Dashboard() {
         }}
         showsVerticalScrollIndicator={false}
       />
+
       <BotaoFlutuanteAdicionar style={{ bottom: 32 }} />
     </View>
   );
@@ -198,7 +196,7 @@ export default function Dashboard() {
 function Section({ title, children }) {
   return (
     <View style={styles.bloco}>
-      {title ? <Text style={styles.subtitulo}>{title}</Text> : null}
+      {title && <Text style={styles.subtitulo}>{title}</Text>}
       {children}
     </View>
   );

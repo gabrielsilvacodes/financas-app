@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
+import { CATEGORIAS_PADRAO } from "../constants/categorias";
 import STORAGE_KEYS from "../constants/storageKeys";
 
 const CHAVE_TRANSACOES = STORAGE_KEYS.TRANSACOES;
@@ -20,13 +21,12 @@ async function salvarJson(chave, dados) {
   }
 }
 
-async function carregarJson(chave, fallback = []) {
+async function carregarJson(chave, fallback = {}) {
   try {
     const json = await AsyncStorage.getItem(chave);
     if (!json) return fallback;
     const dados = JSON.parse(json);
-    if (Array.isArray(dados)) return dados;
-    // Se por algum motivo veio um objeto/valor inválido, retorna fallback
+    if (typeof dados === "object" && dados !== null) return dados;
     return fallback;
   } catch (error) {
     console.error(`❌ Falha ao carregar dados de "${chave}":`, error);
@@ -60,17 +60,28 @@ export async function carregarDados(fallback = []) {
   const dados = await carregarJson(CHAVE_TRANSACOES, fallback);
   let precisaAtualizar = false;
 
-  // Corrige transações sem ID (legado)
   const corrigidos = dados.map((t) => {
-    if (!t?.id) {
+    const novaTransacao = { ...t };
+
+    // Corrige transações sem ID
+    if (!novaTransacao.id) {
+      novaTransacao.id = uuidv4();
       precisaAtualizar = true;
-      return { ...t, id: uuidv4() };
     }
-    return t;
+
+    // Corrige formato da categoria (de string para objeto com chave)
+    if (typeof novaTransacao.categoria === "string") {
+      novaTransacao.categoria = { chave: novaTransacao.categoria };
+      precisaAtualizar = true;
+    }
+
+    return novaTransacao;
   });
 
-  // Salva os corrigidos apenas se necessário
-  if (precisaAtualizar) await salvarDados(corrigidos);
+  if (precisaAtualizar) {
+    await salvarDados(corrigidos);
+  }
+
   return corrigidos;
 }
 
@@ -116,16 +127,31 @@ export async function atualizarTransacao(transacaoAtualizada) {
 /* 🎨 CATEGORIAS PERSONALIZADAS (CRUD)   */
 /* ====================================== */
 
-export async function salvarCategorias(lista) {
-  if (!Array.isArray(lista)) {
-    throw new Error("❌ As categorias devem estar em um array.");
+export async function salvarCategorias(objetoCategorias) {
+  if (
+    !objetoCategorias ||
+    typeof objetoCategorias !== "object" ||
+    (!Array.isArray(objetoCategorias.entrada) &&
+      !Array.isArray(objetoCategorias.saida))
+  ) {
+    throw new Error(
+      "❌ O objeto de categorias deve conter arrays 'entrada' e/ou 'saida'."
+    );
   }
-  const limpos = lista.filter(Boolean);
-  return await salvarJson(CHAVE_CATEGORIAS, limpos);
+
+  return await salvarJson(CHAVE_CATEGORIAS, objetoCategorias);
 }
 
-export async function carregarCategorias(fallback = []) {
-  return await carregarJson(CHAVE_CATEGORIAS, fallback);
+export async function carregarCategorias() {
+  const categorias = await carregarJson(CHAVE_CATEGORIAS, null);
+
+  if (!categorias || !categorias.entrada || !categorias.saida) {
+    // Se não houver categorias, salva as padrão
+    await salvarCategorias(CATEGORIAS_PADRAO);
+    return CATEGORIAS_PADRAO;
+  }
+
+  return categorias;
 }
 
 export async function limparCategorias() {

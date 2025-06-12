@@ -17,19 +17,16 @@ import EmptyState from "../../components/EmptyState";
 import GastoItem from "../../components/GastoItem";
 import Header from "../../components/Header";
 import COLORS from "../../constants/colors";
-import {
-  carregarCategorias,
-  carregarDados,
-  salvarDados,
-} from "../../utils/storage";
+import { carregarDados, salvarDados } from "../../utils/storage";
 import { formatarDataParaExibicao } from "../../utils/transacaoUtils";
+
+const CATEGORIA_TODAS = "Todas";
 
 export default function ListaGastos() {
   const { width } = useWindowDimensions();
   const { categoria } = useLocalSearchParams();
 
   const [gastos, setGastos] = useState([]);
-  const [categoriasSalvas, setCategoriasSalvas] = useState([]);
   const [filtroCategoria, setFiltroCategoria] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
@@ -38,13 +35,9 @@ export default function ListaGastos() {
       const carregar = async () => {
         setCarregando(true);
         try {
-          const [dados, categorias] = await Promise.all([
-            carregarDados(),
-            carregarCategorias(),
-          ]);
+          const dados = await carregarDados();
           setGastos(dados);
-          setCategoriasSalvas(categorias || []);
-          setFiltroCategoria(categoria?.toString() ?? null);
+          setFiltroCategoria(categoria ? String(categoria) : null);
         } catch (error) {
           console.error("Erro ao carregar dados:", error);
           Alert.alert("Erro", "Não foi possível carregar as transações.");
@@ -56,25 +49,45 @@ export default function ListaGastos() {
     }, [categoria])
   );
 
+  const obterTextoCategoria = (cat) => {
+    if (typeof cat === "string") return cat.trim();
+    if (typeof cat === "object") return (cat?.value || cat?.nome || "").trim();
+    return "";
+  };
+
   const categoriasDisponiveis = useMemo(() => {
-    const unicos = [...new Set(gastos.map((g) => g.categoria).filter(Boolean))];
-    return ["Todas", ...unicos];
+    const categoriasEmUso = gastos
+      .map((g) => obterTextoCategoria(g.categoria))
+      .filter((cat) => cat && cat !== "");
+
+    const unicos = [...new Set(categoriasEmUso)];
+    const unicosFiltrados = unicos.filter(
+      (cat) => cat.toLowerCase() !== CATEGORIA_TODAS.toLowerCase()
+    );
+
+    return unicosFiltrados.length > 0
+      ? [CATEGORIA_TODAS, ...unicosFiltrados]
+      : [];
   }, [gastos]);
 
   const gastosFiltrados = useMemo(() => {
-    if (!filtroCategoria || filtroCategoria === "Todas") return gastos;
-    return gastos.filter((g) => g.categoria === filtroCategoria);
+    if (!filtroCategoria || filtroCategoria === CATEGORIA_TODAS) return gastos;
+    return gastos.filter(
+      (g) =>
+        obterTextoCategoria(g.categoria).toLowerCase() ===
+        filtroCategoria.toLowerCase()
+    );
   }, [gastos, filtroCategoria]);
 
   const gastosAgrupados = useMemo(() => {
     return Object.entries(
       gastosFiltrados.reduce((acc, item) => {
-        const data = formatarDataParaExibicao(item.data);
+        const data = formatarDataParaExibicao(item.data || new Date());
         acc[data] = acc[data] || [];
         acc[data].push(item);
         return acc;
       }, {})
-    );
+    ).sort(([dataA], [dataB]) => new Date(dataB) - new Date(dataA));
   }, [gastosFiltrados]);
 
   const total = useMemo(() => {
@@ -120,37 +133,61 @@ export default function ListaGastos() {
     <View style={styles.container}>
       <Header titulo="Lista de Transações" mostrarVoltar />
 
-      {/* Filtros */}
-      <View style={[styles.topo, { paddingHorizontal: width < 360 ? 12 : 20 }]}>
-        <View style={styles.filtros}>
-          {categoriasDisponiveis.map((cat) => (
-            <FiltroBotao
-              key={cat}
-              texto={cat}
-              ativo={cat === (filtroCategoria || "Todas")}
-              onPress={() =>
-                setFiltroCategoria((prev) =>
-                  prev === cat || (cat === "Todas" && !prev) ? null : cat
-                )
-              }
-              testID={`filtro-${cat.toLowerCase()}`}
-            />
-          ))}
-        </View>
-        <Text style={styles.totalizador}>Total: R$ {total}</Text>
-      </View>
+      {categoriasDisponiveis.length > 0 && (
+        <View
+          style={[styles.topo, { paddingHorizontal: width < 360 ? 12 : 20 }]}
+        >
+          <View style={styles.filtros}>
+            {categoriasDisponiveis.map((cat, index) => {
+              const chave = String(cat);
+              return (
+                <FiltroBotao
+                  key={`filtro-${index}-${chave}`}
+                  texto={chave}
+                  ativo={chave === (filtroCategoria || CATEGORIA_TODAS)}
+                  onPress={() =>
+                    setFiltroCategoria((prev) =>
+                      prev === chave || (chave === CATEGORIA_TODAS && !prev)
+                        ? null
+                        : chave
+                    )
+                  }
+                  testID={`filtro-${chave.toLowerCase()}`}
+                />
+              );
+            })}
+          </View>
 
-      {/* Lista agrupada */}
+          <Text style={styles.totalizador}>Total: R$ {total}</Text>
+
+          {filtroCategoria && filtroCategoria !== CATEGORIA_TODAS && (
+            <TouchableOpacity
+              onPress={() => setFiltroCategoria(null)}
+              style={{ marginTop: 6 }}
+            >
+              <Text
+                style={{
+                  color: COLORS.vermelho,
+                  textAlign: "center",
+                  fontSize: 13,
+                }}
+              >
+                Remover filtro
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      )}
+
       <FlatList
         data={gastosAgrupados}
-        keyExtractor={([data], i) => `${data}-${i}`}
+        keyExtractor={([data]) => `grupo-${data}`}
         renderItem={({ item: [data, transacoes] }) => (
           <View style={styles.grupoCard}>
             <View style={styles.grupoHeader}>
               <Text style={styles.dataTitulo}>{data}</Text>
-              {/* Exemplo: total do grupo no header */}
               <Text style={styles.grupoTotal}>
-                R$&nbsp;
+                R${" "}
                 {transacoes
                   .reduce((acc, t) => acc + (parseFloat(t.valor) || 0), 0)
                   .toFixed(2)
@@ -158,23 +195,14 @@ export default function ListaGastos() {
               </Text>
             </View>
             {transacoes.map((gasto) => (
-              <View key={gasto.id} style={styles.transacaoContainer}>
-                <GastoItem
-                  id={gasto.id}
-                  data={formatarDataParaExibicao(gasto.data)}
-                  nome={gasto.titulo}
-                  valor={parseFloat(gasto.valor)}
-                  categoria={gasto.categoria}
-                  tipo={gasto.tipo}
-                />
+              <View key={`gasto-${gasto.id}`} style={styles.transacaoContainer}>
+                <GastoItem {...gasto} />
                 <TouchableOpacity
                   onPress={() => removerGasto(gasto.id, gasto.titulo)}
                   accessibilityLabel={`Excluir ${gasto.titulo}`}
-                  accessibilityHint="Remove essa transação da lista"
                   accessibilityRole="button"
                   hitSlop={18}
                   style={styles.trashTouch}
-                  testID={`remover-${gasto.id}`}
                 >
                   <Ionicons name="trash" size={22} color={COLORS.vermelho} />
                 </TouchableOpacity>
@@ -184,8 +212,16 @@ export default function ListaGastos() {
         )}
         ListEmptyComponent={
           <EmptyState
-            titulo="Nenhuma transação registrada"
-            descricao="Use o botão '+' abaixo para adicionar sua primeira transação."
+            titulo={
+              filtroCategoria
+                ? "Nenhuma transação encontrada"
+                : "Nenhuma transação registrada"
+            }
+            descricao={
+              filtroCategoria
+                ? "Tente remover o filtro ou adicionar uma nova transação nesta categoria."
+                : "Use o botão '+' abaixo para adicionar sua primeira transação."
+            }
             icone="wallet-outline"
           />
         }
@@ -193,10 +229,6 @@ export default function ListaGastos() {
           styles.lista,
           { paddingHorizontal: width < 360 ? 10 : 16 },
         ]}
-        testID="lista-transacoes"
-        initialNumToRender={8}
-        windowSize={5}
-        removeClippedSubviews={true}
         showsVerticalScrollIndicator={false}
       />
 
@@ -209,14 +241,8 @@ function FiltroBotao({ texto, ativo, onPress, testID }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[
-        styles.filtroBotao,
-        ativo && styles.filtroBotaoAtivo,
-        { elevation: ativo ? 2 : 0 },
-      ]}
-      activeOpacity={0.9}
+      style={[styles.filtroBotao, ativo && styles.filtroBotaoAtivo]}
       accessibilityRole="button"
-      accessibilityLabel={`Filtrar por ${texto}`}
       testID={testID}
     >
       <Text
@@ -232,24 +258,22 @@ function FiltroBotao({ texto, ativo, onPress, testID }) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.neutroClaro || "#F5F5F5", // Leve acinzentado
-  },
+  container: { flex: 1, backgroundColor: COLORS.neutroClaro },
   loadingContainer: {
     flex: 1,
-    backgroundColor: COLORS.neutroClaro || "#F5F5F5",
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: COLORS.neutroClaro,
   },
   topo: {
     paddingTop: 16,
-    paddingBottom: 10,
+    paddingBottom: 12,
     backgroundColor: COLORS.branco,
     borderBottomWidth: 1,
     borderColor: COLORS.borda,
-    borderRadius: 16,
-    marginBottom: 6,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+    marginBottom: 8,
     shadowColor: "#000",
     shadowOpacity: 0.03,
     shadowRadius: 2,
@@ -258,29 +282,28 @@ const styles = StyleSheet.create({
   filtros: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
-    marginBottom: 8,
     justifyContent: "flex-start",
+    gap: 10,
+    marginBottom: 12,
   },
   filtroBotao: {
     backgroundColor: COLORS.cinzaClaro,
-    paddingVertical: 9,
-    paddingHorizontal: 18,
-    borderRadius: 22,
-    marginRight: 6,
-    marginBottom: 6,
-    minWidth: 70,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    minHeight: 36,
+    justifyContent: "center",
     alignItems: "center",
   },
   filtroBotaoAtivo: {
     backgroundColor: COLORS.verde,
     shadowColor: COLORS.verdeEscuro,
     shadowOpacity: 0.18,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
   filtroTexto: {
-    fontSize: 15,
+    fontSize: 14,
     color: COLORS.textoPrincipal,
   },
   totalizador: {
@@ -292,15 +315,16 @@ const styles = StyleSheet.create({
   },
   lista: {
     paddingBottom: 100,
+    paddingTop: 6,
   },
   grupoCard: {
     backgroundColor: COLORS.branco,
     borderRadius: 12,
-    marginBottom: 14,
-    padding: 10,
+    marginBottom: 16,
+    padding: 12,
     shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
     elevation: 1,
   },
@@ -308,10 +332,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 4,
-    paddingBottom: 4,
+    marginBottom: 8,
     borderBottomWidth: 1,
     borderColor: COLORS.borda,
+    paddingBottom: 6,
   },
   dataTitulo: {
     fontSize: 16,
@@ -320,15 +344,14 @@ const styles = StyleSheet.create({
   },
   grupoTotal: {
     fontSize: 14,
-    color: COLORS.cinzaTexto,
-    fontWeight: "500",
+    fontWeight: "600",
+    color: COLORS.verdeEscuro,
   },
   transacaoContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 2,
-    marginTop: 2,
+    marginVertical: 6,
   },
   trashTouch: {
     padding: 10,

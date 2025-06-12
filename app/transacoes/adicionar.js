@@ -12,33 +12,28 @@ export default function AdicionarTransacao() {
   const router = useRouter();
   const { tipo } = useLocalSearchParams();
 
-  // Normaliza o tipo para evitar erros de maiúsculas/minúsculas ou undefined
+  // Normaliza o tipo e verifica validade
   const tipoNormalizado = useMemo(
-    () => String(tipo || "").toLowerCase(),
+    () => (typeof tipo === "string" ? tipo.toLowerCase() : ""),
     [tipo]
   );
+
   const tipoEhValido = TIPOS_VALIDOS.includes(tipoNormalizado);
 
-  // Redireciona para Home se tipo inválido
   useEffect(() => {
     if (!tipoEhValido) {
       Alert.alert("Erro", "Tipo de transação inválido.");
       router.replace("/");
     }
-    // Inclui router nas dependências para seguir a recomendação do React
   }, [tipoEhValido, router]);
 
-  // Callback chamado ao salvar uma transação
   const handleSalvar = () => {
-    // Opcional: exibir um feedback visual de sucesso antes de redirecionar
-    // Alert.alert("Sucesso", "Transação adicionada!");
+    // 🚀 Redireciona após salvar
     router.replace("/");
   };
 
-  // Aguarda redirecionamento para não exibir a tela
-  if (!tipoEhValido) {
-    return null;
-  }
+  // Evita exibição se o tipo é inválido
+  if (!tipoEhValido) return null;
 
   return (
     <View style={styles.container} testID="adicionar-transacao-screen">
