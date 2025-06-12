@@ -1,20 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import { useCallback } from "react";
 import {
+  ActivityIndicator,
   Platform,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
-
 import COLORS from "../constants/colors";
 
 /**
- * Botão reutilizável com:
- * - Variação de cores (normal ou invertido)
- * - Tamanho (normal ou grande)
- * - Largura (adaptável ou fullWidth)
+ * Botão verde versátil com ícone, loading e feedback visual.
  */
 export default function BotaoVerde({
   texto = "Ação",
@@ -25,24 +23,32 @@ export default function BotaoVerde({
   size = "normal",
   fullWidth = false,
   testID,
+  loading = false,
+  disabled = false,
+  style, // permite customização extra
 }) {
   const router = useRouter();
 
-  const handlePress = () => {
-    if (onPress) return onPress();
-    if (href) return router.push(href);
-  };
+  const handlePress = useCallback(() => {
+    if (!loading && !disabled) {
+      if (typeof onPress === "function") onPress();
+      else if (href) router.push(href);
+    }
+  }, [onPress, href, router, loading, disabled]);
 
   const buttonStyles = [
     styles.base,
     invertido ? styles.inverso : styles.verde,
     size === "grande" && styles.grande,
     fullWidth && styles.fullWidth,
+    (disabled || loading) && styles.disabled,
+    style,
   ];
 
   const textoStyle = [
     styles.textoBase,
     invertido ? styles.textoVerde : styles.textoBranco,
+    (disabled || loading) && styles.textoDesabilitado,
   ];
 
   const iconColor = invertido ? COLORS.verde : COLORS.branco;
@@ -51,24 +57,33 @@ export default function BotaoVerde({
     <TouchableOpacity
       onPress={handlePress}
       style={buttonStyles}
-      activeOpacity={0.85}
+      activeOpacity={disabled ? 1 : 0.75}
       accessibilityRole="button"
       accessibilityLabel={`Botão: ${texto}`}
-      accessible={true}
       testID={testID}
+      disabled={disabled || loading}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       <View style={styles.conteudo}>
-        {icone && (
-          <Ionicons
-            name={icone}
-            size={18}
+        {loading ? (
+          <ActivityIndicator
+            size={20}
             color={iconColor}
-            style={styles.icone}
-            accessibilityElementsHidden={true}
-            importantForAccessibility="no"
+            style={{ marginRight: 10 }}
           />
+        ) : (
+          icone && (
+            <Ionicons
+              name={icone}
+              size={20}
+              color={iconColor}
+              style={styles.icone}
+            />
+          )
         )}
-        <Text style={textoStyle}>{texto}</Text>
+        <Text style={textoStyle} numberOfLines={1} ellipsizeMode="tail">
+          {texto}
+        </Text>
       </View>
     </TouchableOpacity>
   );
@@ -76,52 +91,70 @@ export default function BotaoVerde({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 48,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 8,
+    minHeight: 50,
+    minWidth: 110,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 10,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginVertical: 4,
     ...Platform.select({
       android: { elevation: 2 },
       ios: {
         shadowColor: "#000",
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.11,
         shadowOffset: { width: 0, height: 2 },
         shadowRadius: 4,
       },
     }),
+    transitionDuration: "150ms", // para web (opcional)
   },
   verde: {
     backgroundColor: COLORS.verde,
+    borderWidth: 0,
   },
   inverso: {
     backgroundColor: COLORS.branco,
-    borderWidth: 1.5,
+    borderWidth: 1.7,
     borderColor: COLORS.verde,
   },
   fullWidth: {
     width: "100%",
   },
   grande: {
-    paddingVertical: 16,
+    paddingVertical: 18,
+    minHeight: 60,
   },
   conteudo: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    minWidth: 0, // permite texto quebrar corretamente
+    flex: 1,
   },
   icone: {
     marginRight: 8,
+    alignSelf: "center",
   },
   textoBase: {
-    fontSize: 14,
-    fontWeight: "bold",
+    fontSize: 16,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    textAlign: "center",
+    flexShrink: 1,
   },
   textoBranco: {
     color: COLORS.branco,
   },
   textoVerde: {
     color: COLORS.verde,
+  },
+  disabled: {
+    opacity: 0.58,
+  },
+  textoDesabilitado: {
+    color: COLORS.cinzaTexto,
   },
 });

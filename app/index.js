@@ -1,28 +1,29 @@
-import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
+  FlatList,
   Platform,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   useWindowDimensions,
 } from "react-native";
 
+import BotaoFlutuanteAdicionar from "../components/BotaoFlutuanteAdicionar";
 import BotaoVerde from "../components/BotaoVerde";
 import CategoriaCard from "../components/CategoriaCard";
+import EmptyState from "../components/EmptyState";
 import GraficoPizza from "../components/GraficoPizza";
 import Header from "../components/Header";
 import LegendaPizza from "../components/LegendaPizza";
 
-import { CATEGORIAS } from "../constants/categorias";
 import COLORS from "../constants/colors";
+import { gerarDadosPizza, somarValores } from "../utils/estatisticas";
 import { formataValor } from "../utils/formatacao";
-import { carregarDados } from "../utils/storage";
+import { carregarCategorias, carregarDados } from "../utils/storage";
 
 export default function Dashboard() {
   const { width } = useWindowDimensions();
@@ -31,128 +32,165 @@ export default function Dashboard() {
   const [transacoes, setTransacoes] = useState([]);
   const [valorTotal, setValorTotal] = useState(0);
   const [dadosPizza, setDadosPizza] = useState([]);
+  const [categorias, setCategorias] = useState([]);
+  const [carregando, setCarregando] = useState(true);
 
   useFocusEffect(
     useCallback(() => {
-      async function carregarTransacoes() {
-        const dados = await carregarDados();
-        setTransacoes(dados);
+      const carregarDadosIniciais = async () => {
+        setCarregando(true);
+        try {
+          const dados = await carregarDados();
+          const cats = await carregarCategorias();
 
-        const entradas = dados
-          .filter((t) => t.tipo === "entrada")
-          .reduce((acc, cur) => acc + Number(cur.valor), 0);
+          setTransacoes(dados);
 
-        const saidas = dados
-          .filter((t) => t.tipo === "saida")
-          .reduce((acc, cur) => acc + Number(cur.valor), 0);
+          const listaCategorias = [
+            ...(Array.isArray(cats?.entrada) ? cats.entrada : []),
+            ...(Array.isArray(cats?.saida) ? cats.saida : []),
+          ];
+          setCategorias(listaCategorias);
 
-        setValorTotal(entradas - saidas);
-        setDadosPizza(gerarDadosPizza(dados));
-      }
+          const entradas = somarValores(dados, "entrada");
+          const saidas = somarValores(dados, "saida");
+          setValorTotal(entradas - saidas);
 
-      carregarTransacoes();
+          const pizza = gerarDadosPizza(dados, listaCategorias);
+          setDadosPizza(pizza);
+        } catch (erro) {
+          console.error("❌ Erro ao carregar dados da Dashboard:", erro);
+          Alert.alert("Erro", "Não foi possível carregar as informações.");
+        } finally {
+          setCarregando(false);
+        }
+      };
+      carregarDadosIniciais();
     }, [])
   );
 
-  const gerarDadosPizza = (dados) => {
-    return CATEGORIAS.map((cat) => {
-      const total = dados
-        .filter((t) => t.tipo === "saida" && t.categoria === cat.nome)
-        .reduce((acc, cur) => acc + Number(cur.valor), 0);
+  if (carregando) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={COLORS.verde} />
+        <Text style={styles.loadingText}>Carregando seus dados...</Text>
+      </View>
+    );
+  }
 
-      return {
-        name: cat.nome,
-        amount: total,
-        color: cat.cor,
-      };
-    }).filter((c) => c.amount > 0);
-  };
-
-  const abrirSelecaoTipo = () => {
-    Alert.alert("Tipo de Transação", "O que deseja registrar?", [
-      {
-        text: "Entrada",
-        onPress: () =>
-          router.push({
-            pathname: "/transacoes/adicionar",
-            params: { tipo: "entrada" },
-          }),
-      },
-      {
-        text: "Saída",
-        onPress: () =>
-          router.push({
-            pathname: "/transacoes/adicionar",
-            params: { tipo: "saida" },
-          }),
-      },
-      { text: "Cancelar", style: "cancel" },
-    ]);
-  };
+  const isEmpty = transacoes.length === 0 && categorias.length === 0;
 
   return (
     <View style={styles.container}>
-      <Header titulo="Visão Geral" />
+      <Header
+        titulo="Visão Geral"
+        corFundo={COLORS.verde}
+        corTitulo={COLORS.branco}
+        corIcone={COLORS.branco}
+        mostrarEstatisticas={true}
+      />
 
-      <ScrollView
-        contentContainerStyle={[
-          styles.content,
-          { paddingHorizontal: width < 360 ? 16 : 24 },
-        ]}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Section title="Saldo Total">
-          <Text style={styles.valor}>{formataValor(valorTotal)}</Text>
-        </Section>
+      <FlatList
+        data={categorias}
+        keyExtractor={(item, index) => `${item?.chave || item?.nome}-${index}`}
+        ListHeaderComponent={
+          <View
+            style={[
+              styles.content,
+              { paddingHorizontal: width < 360 ? 16 : 24 },
+            ]}
+          >
+            {isEmpty && (
+              <View style={styles.emptyWrapper}>
+                <EmptyState
+                  titulo="Seu app está pronto!"
+                  descricao="Comece adicionando sua primeira transação."
+                  icone="wallet-outline"
+                />
+              </View>
+            )}
 
-        <Section title="Distribuição por categoria">
-          {dadosPizza.length > 0 ? (
-            <>
-              <GraficoPizza dados={dadosPizza} />
-              <LegendaPizza dados={dadosPizza} />
-            </>
-          ) : (
-            <Text style={styles.semDados}>Nenhum gasto registrado ainda.</Text>
-          )}
-        </Section>
+            {!isEmpty && (
+              <>
+                <Section title="Saldo Total">
+                  <View style={styles.cardBox}>
+                    <Text
+                      style={[
+                        styles.valor,
+                        {
+                          color:
+                            valorTotal >= 0 ? COLORS.verde : COLORS.vermelho,
+                        },
+                      ]}
+                      testID="valor-total"
+                    >
+                      {formataValor(valorTotal)}
+                    </Text>
+                  </View>
+                </Section>
 
-        <View style={[styles.bloco, styles.botoes]}>
-          <BotaoVerde
-            texto="Ver Transações"
-            href="/transacoes/lista"
-            invertido
-            icone="list"
-          />
-        </View>
+                <Section title="Distribuição por categoria">
+                  <View style={styles.cardBox}>
+                    {Array.isArray(dadosPizza) &&
+                    dadosPizza.filter((x) => x.population > 0).length > 0 ? (
+                      <>
+                        <GraficoPizza dados={dadosPizza} />
+                        <LegendaPizza dados={dadosPizza} />
+                      </>
+                    ) : (
+                      <EmptyState
+                        titulo="Nenhum gasto registrado"
+                        descricao="Adicione transações para visualizar a distribuição."
+                        icone="pie-chart-outline"
+                      />
+                    )}
+                  </View>
+                </Section>
 
-        <Section title="Categorias">
-          <View style={styles.listaCategorias}>
-            {CATEGORIAS.map((cat) => (
-              <CategoriaCard
-                key={cat.id}
-                nome={cat.nome}
-                cor={cat.cor}
-                onPress={() =>
-                  router.push({
-                    pathname: "/transacoes/lista",
-                    params: { categoria: cat.nome },
-                  })
-                }
-              />
-            ))}
+                <View style={[styles.bloco, styles.botoes]}>
+                  <BotaoVerde
+                    texto="Ver Transações"
+                    href="/transacoes/lista"
+                    invertido
+                    icone="list"
+                    testID="botao-transacoes"
+                  />
+                </View>
+                <Section title="Categorias" />
+              </>
+            )}
           </View>
-        </Section>
-      </ScrollView>
-
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={abrirSelecaoTipo}
-        accessibilityRole="button"
-        accessibilityLabel="Adicionar nova transação"
-      >
-        <Ionicons name="add" size={28} color={COLORS.branco} />
-      </TouchableOpacity>
+        }
+        renderItem={({ item, index }) => (
+          <View style={{ paddingHorizontal: width < 360 ? 16 : 24 }}>
+            <CategoriaCard
+              key={`${item?.chave || item?.nome}-${index}`}
+              nome={item.nome}
+              cor={item.cor || COLORS.categoria?.outros}
+              onPress={() =>
+                router.push({
+                  pathname: "/transacoes/lista",
+                  params: { categoria: item.nome },
+                })
+              }
+            />
+          </View>
+        )}
+        ListEmptyComponent={
+          !isEmpty && (
+            <EmptyState
+              titulo="Nenhuma categoria cadastrada"
+              descricao="Adicione ou personalize suas categorias."
+              icone="grid-outline"
+            />
+          )
+        }
+        contentContainerStyle={{
+          paddingBottom: 100,
+          paddingTop: Platform.select({ ios: 24, android: 16 }),
+        }}
+        showsVerticalScrollIndicator={false}
+      />
+      <BotaoFlutuanteAdicionar style={{ bottom: 32 }} />
     </View>
   );
 }
@@ -160,7 +198,7 @@ export default function Dashboard() {
 function Section({ title, children }) {
   return (
     <View style={styles.bloco}>
-      {title && <Text style={styles.subtitulo}>{title}</Text>}
+      {title ? <Text style={styles.subtitulo}>{title}</Text> : null}
       {children}
     </View>
   );
@@ -169,11 +207,23 @@ function Section({ title, children }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: COLORS.neutroClaro,
+  },
+  loadingContainer: {
+    flex: 1,
     backgroundColor: COLORS.branco,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  loadingText: {
+    color: COLORS.cinzaTexto,
+    marginTop: 12,
+    fontSize: 16,
+    letterSpacing: 0.2,
   },
   content: {
-    paddingTop: Platform.select({ ios: 24, android: 16 }),
-    paddingBottom: 80,
+    paddingTop: 0,
   },
   bloco: {
     marginBottom: 32,
@@ -181,44 +231,35 @@ const styles = StyleSheet.create({
   subtitulo: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.cinzaTexto,
-    marginBottom: 6,
+    color: COLORS.textoPrincipal,
+    marginBottom: 10,
+    marginTop: 8,
+    letterSpacing: 0.1,
   },
   valor: {
-    fontSize: 30,
+    fontSize: 34,
     fontWeight: "bold",
-    color: COLORS.textoPrincipal,
-  },
-  semDados: {
-    fontSize: 14,
-    color: COLORS.cinzaTexto,
     textAlign: "center",
-    marginTop: 12,
+    letterSpacing: 0.2,
+  },
+  cardBox: {
+    backgroundColor: COLORS.fundoClaro,
+    borderRadius: 12,
+    padding: 24,
+    shadowColor: COLORS.sombraLeve,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+    marginBottom: 6,
   },
   botoes: {
     flexDirection: "row",
     justifyContent: "center",
-    marginBottom: 16,
-  },
-  listaCategorias: {
     gap: 12,
-    marginTop: 8,
+    flexWrap: "wrap",
   },
-  fab: {
-    position: "absolute",
-    bottom: 24,
-    alignSelf: "center",
-    backgroundColor: COLORS.verde,
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 6,
-    elevation: 6,
-    zIndex: 10,
+  emptyWrapper: {
+    paddingVertical: 32,
   },
 });

@@ -1,36 +1,49 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { useEffect } from "react";
-import { Alert, Platform, StyleSheet, View } from "react-native";
+import { useEffect, useMemo } from "react";
+import { Alert, StyleSheet, View } from "react-native";
 
 import FormTransacao from "../../components/FormTransacao";
 import Header from "../../components/Header";
 import COLORS from "../../constants/colors";
 
+const TIPOS_VALIDOS = ["entrada", "saida"];
+
 export default function AdicionarTransacao() {
   const router = useRouter();
-  const { tipo = "saida" } = useLocalSearchParams();
+  const { tipo } = useLocalSearchParams();
 
+  // Normaliza o tipo para evitar erros de maiúsculas/minúsculas ou undefined
+  const tipoNormalizado = useMemo(
+    () => String(tipo || "").toLowerCase(),
+    [tipo]
+  );
+  const tipoEhValido = TIPOS_VALIDOS.includes(tipoNormalizado);
+
+  // Redireciona para Home se tipo inválido
   useEffect(() => {
-    const tiposValidos = ["entrada", "saida"];
-
-    // Verificação se o tipo é válido
-    if (!tiposValidos.includes(tipo)) {
+    if (!tipoEhValido) {
       Alert.alert("Erro", "Tipo de transação inválido.");
-      router.replace("/index"); // Redireciona para uma rota segura
+      router.replace("/");
     }
-  }, [tipo]);
+    // Inclui router nas dependências para seguir a recomendação do React
+  }, [tipoEhValido, router]);
 
-  const titulo = tipo === "entrada" ? "Adicionar Receita" : "Adicionar Gasto";
-
+  // Callback chamado ao salvar uma transação
   const handleSalvar = () => {
-    console.log("Transação salva, navegando...");
-    router.replace("/"); // Substitui a tela em vez de empilhar
+    // Opcional: exibir um feedback visual de sucesso antes de redirecionar
+    // Alert.alert("Sucesso", "Transação adicionada!");
+    router.replace("/");
   };
 
+  // Aguarda redirecionamento para não exibir a tela
+  if (!tipoEhValido) {
+    return null;
+  }
+
   return (
-    <View style={styles.container}>
-      <Header titulo={titulo} mostrarVoltar />
-      <FormTransacao tipo={tipo} onSalvar={handleSalvar} />
+    <View style={styles.container} testID="adicionar-transacao-screen">
+      <Header titulo="Adicionar Transação" mostrarVoltar />
+      <FormTransacao tipo={tipoNormalizado} onSalvar={handleSalvar} />
     </View>
   );
 }
@@ -39,6 +52,5 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.branco,
-    paddingTop: Platform.OS === "ios" ? 0 : 0,
   },
 });

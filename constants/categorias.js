@@ -1,36 +1,25 @@
-import COLORS from "./colors";
+// constants/categorias.js
 
 /**
- * Lista de categorias disponíveis para transações.
- * Cada item contém:
- * - id: identificador único (string)
- * - nome: rótulo exibido ao usuário
- * - chave: versão normalizada usada para buscas internas
- * - cor: cor associada à categoria (para gráficos)
+ * Estrutura padrão de categorias para transações.
+ * Cada categoria possui:
+ *  - chave: identificador único
+ *  - nome: label exibido na UI
+ *  - cor: cor hexadecimal para exibição
  */
-export const CATEGORIAS = [
-  {
-    id: "1",
-    nome: "Alimentação",
-    chave: "alimentacao",
-    cor: COLORS.alerta,
-  },
-  {
-    id: "2",
-    nome: "Transporte",
-    chave: "transporte",
-    cor: COLORS.transporte,
-  },
-  {
-    id: "3",
-    nome: "Lazer",
-    chave: "lazer",
-    cor: COLORS.lazer,
-  },
-  {
-    id: "4",
-    nome: "Outros",
-    chave: "outros",
-    cor: COLORS.outros,
-  },
-];
+export const CATEGORIAS_PADRAO = {
+  entrada: [
+    { chave: "salario", nome: "Salário", cor: "#2D6A4F" },
+    { chave: "presente", nome: "Presente", cor: "#38A3A5" },
+    { chave: "venda", nome: "Venda", cor: "#80ED99" },
+    { chave: "outros_entrada", nome: "Outros", cor: "#A0C4FF" }, // padrão singular para chave
+  ],
+  saida: [
+    { chave: "alimentacao", nome: "Alimentação", cor: "#E76F51" },
+    { chave: "transporte", nome: "Transporte", cor: "#F4A261" },
+    { chave: "lazer", nome: "Lazer", cor: "#E5989B" },
+    { chave: "educacao", nome: "Educação", cor: "#B5838D" },
+    { chave: "saude", nome: "Saúde", cor: "#FFB4A2" },
+    { chave: "outros_saida", nome: "Outros", cor: "#CDB4DB" }, // padrão singular para chave
+  ],
+};

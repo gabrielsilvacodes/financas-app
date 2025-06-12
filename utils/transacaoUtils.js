@@ -1,63 +1,88 @@
 import uuid from "react-native-uuid";
 
 /**
- * Verifica se todos os campos obrigatórios foram preenchidos.
+ * Verifica se os campos obrigatórios estão preenchidos corretamente.
+ * Aceita valor como número ou string, data como string ou objeto Date.
+ * @param {Object} campos
+ * @param {string|number} campos.valor
+ * @param {string} campos.descricao
+ * @param {string|Date} campos.data
+ * @returns {boolean}
  */
 export function validarCampos({ valor, descricao, data }) {
-  return valor && descricao && data;
+  const valorValido = valor?.toString().trim() !== "";
+  const descricaoValida = descricao?.trim() !== "";
+  // Aceita data como string ou Date
+  const dataValida =
+    (typeof data === "string" && data?.trim() !== "") || data instanceof Date;
+  return valorValido && descricaoValida && dataValida;
 }
 
 /**
- * Converte o valor em string (ex: "R$ 12,50", "12,50", " 12.5 ") para número.
+ * Converte uma string de valor monetário para número.
+ * Ex: "R$ 12,50" → 12.5 | "12,50" → 12.5
+ * @param {string|number} valorString
+ * @returns {number}
  */
 export function parseValor(valorString) {
+  if (typeof valorString === "number") return valorString;
   if (!valorString) return 0;
-
   const limpo = valorString
-    .replace(/\s/g, "") // remove espaços
-    .replace("R$", "") // remove símbolo de real
-    .replace(",", "."); // troca vírgula por ponto
-
+    ?.replace(/\s/g, "")
+    .replace("R$", "")
+    .replace(",", ".");
   const valor = parseFloat(limpo);
   return isNaN(valor) ? 0 : valor;
 }
 
 /**
- * Verifica se a data está no formato DD/MM/AAAA.
+ * Verifica se uma data está no formato DD/MM/AAAA.
+ * @param {string} dataString
+ * @returns {boolean}
  */
 export function dataEhValida(dataString) {
   const regex = /^\d{2}\/\d{2}\/\d{4}$/;
-  return regex.test(dataString.trim());
+  return regex.test(dataString?.trim());
 }
 
 /**
- * Converte a data de DD/MM/AAAA para AAAA-MM-DD.
+ * Converte data no formato DD/MM/AAAA para ISO (AAAA-MM-DD).
+ * Se inválida, retorna string vazia.
+ * @param {string} dataString
+ * @returns {string}
  */
 export function formatarDataParaISO(dataString) {
-  return dataString.split("/").reverse().join("-");
+  if (!dataEhValida(dataString)) return "";
+  const [dia, mes, ano] = dataString.trim().split("/");
+  return `${ano}-${mes}-${dia}`;
 }
 
 /**
- * Converte data de AAAA-MM-DD para DD/MM/AAAA para exibição.
+ * Converte data no formato ISO (AAAA-MM-DD) ou ISO DateTime para DD/MM/AAAA.
+ * Se inválida, retorna string vazia.
+ * @param {string} dataISO
+ * @returns {string}
  */
 export function formatarDataParaExibicao(dataISO) {
   if (!dataISO) return "";
-  const [ano, mes, dia] = dataISO.split("-");
+  // Trata formato "2024-06-13" ou "2024-06-13T23:32:08.259Z"
+  const iso = dataISO.split("T")[0];
+  if (!iso.includes("-")) return "";
+  const [ano, mes, dia] = iso.split("-");
   return `${dia}/${mes}/${ano}`;
 }
 
 /**
- * Formata o valor como string de moeda BR (ex: R$ 12,50).
- */
-export function formatarValor(valor) {
-  const numero = Number(valor);
-  return isNaN(numero)
-    ? "R$ 0,00"
-    : `R$ ${numero.toFixed(2).replace(".", ",")}`;
-}
-
-/**
- * Cria uma transação normalizada e pronta para ser salva.
+ * Cria uma transação formatada e segura.
+ * Sempre salva a data em formato ISO (AAAA-MM-DD).
+ * @param {Object} dados
+ * @param {string|number} dados.valor
+ * @param {string} dados.descricao
+ * @param {string|Date} dados.data - pode ser string (DD/MM/AAAA, ISO) ou objeto Date
+ * @param {string} dados.tipo
+ * @param {string} dados.categoria
+ * @param {string|null} [idExistente]
+ * @returns {Object} Transação formatada
  */
 export function criarTransacao({
   valor,
@@ -67,12 +92,27 @@ export function criarTransacao({
   categoria,
   idExistente = null,
 }) {
+  let dataISO = "";
+
+  if (data instanceof Date) {
+    // Formato ISO puro (AAAA-MM-DD)
+    dataISO = data.toISOString().split("T")[0];
+  } else if (typeof data === "string") {
+    // Se vier DD/MM/AAAA, converte para ISO
+    if (dataEhValida(data)) {
+      dataISO = formatarDataParaISO(data);
+    } else if (data.includes("-")) {
+      // Já está no formato ISO
+      dataISO = data.split("T")[0];
+    }
+  }
+
   return {
     id: idExistente || uuid.v4(),
-    titulo: descricao.trim(),
+    titulo: descricao?.trim() || "",
     valor: parseValor(valor),
     tipo,
     categoria,
-    data: formatarDataParaISO(data),
+    data: dataISO,
   };
 }

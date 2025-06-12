@@ -6,39 +6,28 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-
     "icon": "./assets/icon.png",
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
-
     "updates": {
       "fallbackToCacheTimeout": 0
     },
-
     "assetBundlePatterns": ["**/*"],
     "plugins": ["expo-router"],
-
     "ios": {
       "bundleIdentifier": "com.seunome.financasapp",
-      "supportsTablet": true,
-
-      "infoPlist": {
-        "UIViewControllerBasedStatusBarAppearance": true
-      }
+      "supportsTablet": true
     },
-
     "android": {
       "package": "com.seunome.financasapp",
-      "permissions": [],
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#FFFFFF"
       }
     },
-
     "web": {
       "favicon": "./assets/favicon.png"
     }

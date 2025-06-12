@@ -1,52 +1,49 @@
 import { Ionicons } from "@expo/vector-icons";
+import { memo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import COLORS from "../constants/colors";
 
 /**
- * Componente visual de cartão de categoria com:
- * - Indicador colorido
- * - Nome da categoria
- * - Ícone de ação
+ * Cartão clicável de categoria com indicador colorido e ícone de seta.
  */
-export default function CategoriaCard({
-  nome = "",
-  cor = COLORS.borda,
-  onPress,
+function CategoriaCard({
+  nome = "Categoria",
+  cor = COLORS.categoria?.outros || COLORS.verde,
+  onPress = () => {},
+  ativo = false,
   testID,
 }) {
+  const nomeSeguro = nome?.trim() || "Categoria";
+  const corIndicador = cor || COLORS.categoria?.outros || COLORS.verde;
+
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={styles.card}
-      activeOpacity={0.85}
+      style={[styles.card, ativo && styles.cardAtivo]}
+      activeOpacity={0.7}
       accessibilityRole="button"
-      accessibilityLabel={`Categoria: ${nome}`}
-      accessibilityHint="Toque para ver os detalhes da categoria"
-      accessible={true}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      testID={testID}
+      accessibilityLabel={`Categoria: ${nomeSeguro}`}
+      accessibilityHint={`Toque para visualizar transações da categoria ${nomeSeguro}`}
+      hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+      testID={testID || `card-${nomeSeguro.toLowerCase().replace(/\s/g, "-")}`}
     >
       <View style={styles.container}>
-        {/* 🔵 Indicador de cor + texto */}
         <View style={styles.info}>
-          <View style={[styles.indicador, { backgroundColor: cor }]} />
+          <View style={[styles.indicador, { backgroundColor: corIndicador }]} />
           <Text
             style={styles.nomeCategoria}
             numberOfLines={1}
             ellipsizeMode="tail"
           >
-            {nome}
+            {nomeSeguro}
           </Text>
         </View>
-
-        {/* ➤ Ícone de ação */}
         <Ionicons
           name="chevron-forward"
-          size={20}
+          size={22}
           color={COLORS.cinzaTexto}
           style={styles.icone}
-          accessibilityElementsHidden
-          importantForAccessibility="no"
+          accessible={false}
         />
       </View>
     </TouchableOpacity>
@@ -58,11 +55,22 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.branco,
     borderColor: COLORS.borda,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 16,
-    paddingHorizontal: 16,
-    minHeight: 56,
+    borderRadius: 12,
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    marginBottom: 14,
+    minHeight: 60,
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  cardAtivo: {
+    borderColor: COLORS.verde,
+    backgroundColor: "#e6f9f1", // leve highlight (padrão de feedback)
+    elevation: 2,
   },
   container: {
     flexDirection: "row",
@@ -73,20 +81,30 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     flex: 1,
+    minWidth: 0,
   },
   indicador: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 12,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    marginRight: 16,
+    borderWidth: 2,
+    borderColor: "#fff",
+    shadowColor: "#000",
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
   },
   nomeCategoria: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "600",
     color: COLORS.textoPrincipal,
     flexShrink: 1,
   },
   icone: {
-    marginLeft: 8,
+    marginLeft: 14,
+    alignSelf: "center",
   },
 });
+
+export default memo(CategoriaCard);

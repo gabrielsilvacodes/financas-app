@@ -1,84 +1,94 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { v4 as uuidv4 } from "uuid";
+import STORAGE_KEYS from "../constants/storageKeys";
 
-// Chave usada para armazenar transações
-const CHAVE_TRANSACOES = "@financas:transacoes";
+const CHAVE_TRANSACOES = STORAGE_KEYS.TRANSACOES;
+const CHAVE_CATEGORIAS = STORAGE_KEYS.CATEGORIAS;
 
-/**
- * Salva o array completo de transações no AsyncStorage.
- * @param {Array} dados - Lista de transações a serem salvas.
- */
-export async function salvarDados(dados) {
+/* ====================================================== */
+/* 🔧 UTILITÁRIOS GENÉRICOS: Leitura e Escrita de JSON     */
+/* ====================================================== */
+
+async function salvarJson(chave, dados) {
   try {
     const json = JSON.stringify(dados);
-    await AsyncStorage.setItem(CHAVE_TRANSACOES, json);
+    await AsyncStorage.setItem(chave, json);
+    return dados;
   } catch (error) {
-    console.error("❌ Erro ao salvar dados no AsyncStorage:", error);
-    throw error;
+    console.error(`❌ Falha ao salvar dados em "${chave}":`, error);
+    throw new Error(`Erro ao salvar dados: ${chave}`);
   }
 }
 
-/**
- * Carrega os dados armazenados, adicionando IDs faltantes se necessário.
- * @returns {Array} - Lista de transações.
- */
-export async function carregarDados() {
+async function carregarJson(chave, fallback = []) {
   try {
-    const json = await AsyncStorage.getItem(CHAVE_TRANSACOES);
-    const dados = json ? JSON.parse(json) : [];
+    const json = await AsyncStorage.getItem(chave);
+    if (!json) return fallback;
+    const dados = JSON.parse(json);
+    if (Array.isArray(dados)) return dados;
+    // Se por algum motivo veio um objeto/valor inválido, retorna fallback
+    return fallback;
+  } catch (error) {
+    console.error(`❌ Falha ao carregar dados de "${chave}":`, error);
+    return fallback;
+  }
+}
 
-    let precisaAtualizar = false;
+async function removerItem(chave) {
+  try {
+    await AsyncStorage.removeItem(chave);
+    // console.log(`🧹 Dados removidos: ${chave}`); // Remover em prod
+  } catch (error) {
+    console.error(`❌ Erro ao remover "${chave}":`, error);
+  }
+}
 
-    const dadosCorrigidos = dados.map((item) => {
-      if (!item.id) {
-        precisaAtualizar = true;
-        return { ...item, id: uuidv4() };
-      }
-      return item;
-    });
+/* ======================================== */
+/* 💸 TRANSAÇÕES FINANCEIRAS (CRUD LOCAL)  */
+/* ======================================== */
 
-    if (precisaAtualizar) {
-      await salvarDados(dadosCorrigidos);
+export async function salvarDados(transacoes) {
+  if (!Array.isArray(transacoes)) {
+    throw new Error("❌ As transações devem estar em um array.");
+  }
+  // Filtra para garantir que só objetos válidos sejam salvos
+  const limpos = transacoes.filter(Boolean);
+  return await salvarJson(CHAVE_TRANSACOES, limpos);
+}
+
+export async function carregarDados(fallback = []) {
+  const dados = await carregarJson(CHAVE_TRANSACOES, fallback);
+  let precisaAtualizar = false;
+
+  // Corrige transações sem ID (legado)
+  const corrigidos = dados.map((t) => {
+    if (!t?.id) {
+      precisaAtualizar = true;
+      return { ...t, id: uuidv4() };
     }
+    return t;
+  });
 
-    return dadosCorrigidos;
-  } catch (error) {
-    console.error("❌ Erro ao carregar dados do AsyncStorage:", error);
-    return [];
-  }
+  // Salva os corrigidos apenas se necessário
+  if (precisaAtualizar) await salvarDados(corrigidos);
+  return corrigidos;
 }
 
-/**
- * Remove todos os dados salvos (usado para testes ou redefinição).
- */
 export async function limparDados() {
-  try {
-    await AsyncStorage.removeItem(CHAVE_TRANSACOES);
-    console.log("✅ Dados limpos com sucesso.");
-  } catch (error) {
-    console.error("❌ Erro ao limpar dados:", error);
-  }
+  await removerItem(CHAVE_TRANSACOES);
 }
 
-/**
- * Busca uma transação pelo ID.
- * @param {string} id - ID da transação.
- * @returns {object|null} - Transação encontrada ou null.
- */
 export async function buscarPorId(id) {
+  if (!id) return null;
   const dados = await carregarDados();
-  return dados.find((item) => item.id === id) || null;
+  return dados.find((t) => t.id === id) || null;
 }
 
-/**
- * Remove uma transação específica pelo ID.
- * @param {string} id - ID da transação a ser removida.
- * @returns {boolean} - Indica se a remoção foi bem-sucedida.
- */
 export async function removerTransacao(id) {
   try {
     const dados = await carregarDados();
-    const atualizados = dados.filter((item) => item.id !== id);
+    const atualizados = dados.filter((t) => t.id !== id);
+    if (dados.length === atualizados.length) return false;
     await salvarDados(atualizados);
     return true;
   } catch (error) {
@@ -87,16 +97,12 @@ export async function removerTransacao(id) {
   }
 }
 
-/**
- * Atualiza uma transação existente.
- * @param {object} transacaoAtualizada - Transação com o mesmo ID da original.
- * @returns {boolean} - Indica se a atualização foi bem-sucedida.
- */
 export async function atualizarTransacao(transacaoAtualizada) {
   try {
+    if (!transacaoAtualizada?.id) throw new Error("Transação sem ID");
     const dados = await carregarDados();
-    const atualizados = dados.map((item) =>
-      item.id === transacaoAtualizada.id ? transacaoAtualizada : item
+    const atualizados = dados.map((t) =>
+      t.id === transacaoAtualizada.id ? transacaoAtualizada : t
     );
     await salvarDados(atualizados);
     return true;
@@ -104,4 +110,24 @@ export async function atualizarTransacao(transacaoAtualizada) {
     console.error("❌ Erro ao atualizar transação:", error);
     return false;
   }
+}
+
+/* ====================================== */
+/* 🎨 CATEGORIAS PERSONALIZADAS (CRUD)   */
+/* ====================================== */
+
+export async function salvarCategorias(lista) {
+  if (!Array.isArray(lista)) {
+    throw new Error("❌ As categorias devem estar em um array.");
+  }
+  const limpos = lista.filter(Boolean);
+  return await salvarJson(CHAVE_CATEGORIAS, limpos);
+}
+
+export async function carregarCategorias(fallback = []) {
+  return await carregarJson(CHAVE_CATEGORIAS, fallback);
+}
+
+export async function limparCategorias() {
+  await removerItem(CHAVE_CATEGORIAS);
 }

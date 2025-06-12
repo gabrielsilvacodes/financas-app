@@ -1,5 +1,3 @@
-// app/transacoes/editar/[id].js
-
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Alert, StyleSheet, View } from "react-native";
@@ -16,59 +14,67 @@ export default function EditarTransacao() {
   const [carregando, setCarregando] = useState(true);
   const [transacao, setTransacao] = useState(null);
 
-  // 🔄 Busca a transação pelo ID ao montar
   useEffect(() => {
     async function buscarTransacao() {
-      const dados = await carregarDados();
-      const encontrada = dados.find((t) => t.id === id);
+      try {
+        const dados = await carregarDados();
+        const encontrada = dados.find((t) => t.id === id);
 
-      if (!encontrada) {
-        Alert.alert("Erro", "Transação não encontrada.");
-        return router.back();
+        if (!encontrada) {
+          Alert.alert("Erro", "Transação não encontrada.");
+          return router.replace("/");
+        }
+
+        setTransacao(encontrada);
+      } catch (error) {
+        Alert.alert("Erro", "Ocorreu um problema ao buscar a transação.");
+        router.replace("/");
+      } finally {
+        setCarregando(false);
       }
-
-      setTransacao(encontrada);
-      setCarregando(false);
     }
 
     if (id) {
       buscarTransacao();
     }
 
-    // 🧹 Limpa estado ao desmontar
+    // Limpa estado ao desmontar a tela
     return () => {
       setTransacao(null);
       setCarregando(true);
     };
-  }, [id]);
+  }, [id, router]); // Incluído router
 
-  // 💾 Salva as alterações feitas no formulário
   const handleSalvar = async (transacaoEditada) => {
-    const dados = await carregarDados();
-    const atualizados = dados.map((t) =>
-      t.id === transacaoEditada.id ? transacaoEditada : t
-    );
-
-    await salvarDados(atualizados);
-    Alert.alert("Sucesso", "Transação atualizada!");
-    router.push("/home");
+    try {
+      const dados = await carregarDados();
+      const atualizados = dados.map((t) =>
+        t.id === transacaoEditada.id ? transacaoEditada : t
+      );
+      await salvarDados(atualizados);
+      Alert.alert("Sucesso", "Transação atualizada!");
+      router.replace("/");
+    } catch {
+      Alert.alert("Erro", "Não foi possível salvar as alterações.");
+    }
   };
 
   if (carregando) {
     return (
-      <View style={styles.loaderContainer}>
+      <View style={styles.loader}>
         <ActivityIndicator size="large" color={COLORS.verde} />
+        {/* Pode adicionar um texto de loading se desejar */}
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessibilityRole="form">
       <Header titulo="Editar Transação" mostrarVoltar />
       <FormTransacao
+        tipo={transacao?.tipo}
         transacaoExistente={transacao}
         onSalvar={handleSalvar}
-        tipo="editar"
       />
     </View>
   );
@@ -79,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.branco,
   },
-  loaderContainer: {
+  loader: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
