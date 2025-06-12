@@ -64,7 +64,6 @@ export default function FormTransacao({
           cor: cat.cor,
         })
       );
-
       const categoriasSalvas = await carregarCategorias(categoriasPadrao);
 
       const listaFinal = [
@@ -109,15 +108,16 @@ export default function FormTransacao({
 
     await salvarCategorias(novasCategorias);
     await carregarCategoriasPersonalizadas();
-    setCategoria(nome);
+    setCategoria(nome); // seleciona a nova categoria automaticamente
     setMostrarModal(false);
   };
 
-  // Ao alterar categoria no dropdown
+  // Handler do dropdown para abrir modal ou selecionar categoria
   const handleCategoriaChange = useCallback((value) => {
     if (value === OPC_NOVA_CATEGORIA.value) {
       setOpen(false);
-      setMostrarModal(true);
+      setTimeout(() => setMostrarModal(true), 250);
+      // Não seleciona "nova_categoria"
     } else {
       setCategoria(value);
     }
@@ -136,18 +136,15 @@ export default function FormTransacao({
       Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
       return;
     }
-
     const valorNumerico = parseValor(valor);
     if (isNaN(valorNumerico) || valorNumerico <= 0) {
       Alert.alert("Valor inválido", "Informe um valor maior que zero.");
       return;
     }
-
     if (!categoria) {
       Alert.alert("Categoria obrigatória", "Escolha uma categoria.");
       return;
     }
-
     setLoading(true);
 
     const novaTransacao = criarTransacao({
@@ -283,7 +280,7 @@ export default function FormTransacao({
           value={categoria === OPC_NOVA_CATEGORIA.value ? null : categoria}
           items={categorias}
           setOpen={setOpen}
-          onChangeValue={handleCategoriaChange} // <-- ajuste aqui
+          onChangeValue={handleCategoriaChange} // Essencial!
           setItems={setCategorias}
           placeholder="Selecione ou adicione uma categoria"
           style={styles.dropdown}
