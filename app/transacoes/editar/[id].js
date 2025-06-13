@@ -8,13 +8,15 @@ import COLORS from "../../../constants/colors";
 import { carregarDados, salvarDados } from "../../../utils/storage";
 
 export default function EditarTransacao() {
-  const { id } = useLocalSearchParams();
   const router = useRouter();
+  const { id } = useLocalSearchParams();
 
   const [carregando, setCarregando] = useState(true);
   const [transacao, setTransacao] = useState(null);
 
   useEffect(() => {
+    let ativo = true;
+
     async function buscarTransacao() {
       try {
         const dados = await carregarDados();
@@ -22,28 +24,29 @@ export default function EditarTransacao() {
 
         if (!encontrada) {
           Alert.alert("Erro", "Transação não encontrada.");
-          return router.replace("/");
+          router.replace("/");
+          return;
         }
 
-        setTransacao(encontrada);
+        if (ativo) setTransacao(encontrada);
       } catch (error) {
         Alert.alert("Erro", "Ocorreu um problema ao buscar a transação.");
         router.replace("/");
       } finally {
-        setCarregando(false);
+        if (ativo) setCarregando(false);
       }
     }
 
-    if (id) {
+    if (typeof id === "string") {
       buscarTransacao();
+    } else {
+      router.replace("/");
     }
 
-    // Limpa estado ao desmontar a tela
     return () => {
-      setTransacao(null);
-      setCarregando(true);
+      ativo = false;
     };
-  }, [id, router]); // Incluído router
+  }, [id, router]);
 
   const handleSalvar = async (transacaoEditada) => {
     try {
@@ -63,7 +66,6 @@ export default function EditarTransacao() {
     return (
       <View style={styles.loader}>
         <ActivityIndicator size="large" color={COLORS.verde} />
-        {/* Pode adicionar um texto de loading se desejar */}
       </View>
     );
   }

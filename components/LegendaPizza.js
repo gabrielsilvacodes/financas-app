@@ -5,6 +5,7 @@ import { formataValor } from "../utils/formatacao";
 
 /**
  * Legenda associada ao gráfico de pizza.
+ * Mostra categoria, cor e valor formatado.
  */
 export default function LegendaPizza({ dados = [] }) {
   if (!Array.isArray(dados) || dados.length === 0) return null;
@@ -15,7 +16,7 @@ export default function LegendaPizza({ dados = [] }) {
       accessible
       accessibilityRole="summary"
       accessibilityLabel="Legenda das categorias do gráfico de pizza"
-      accessibilityHint="Lista de categorias, suas cores e valores correspondentes"
+      accessibilityHint="Lista de categorias com cores e valores"
       testID="legenda-pizza"
     >
       {dados.map((item, index) => (
@@ -23,7 +24,7 @@ export default function LegendaPizza({ dados = [] }) {
           key={`${item?.name || "categoria"}-${index}`}
           nome={item?.name}
           cor={item?.color}
-          valor={item?.amount ?? item?.population}
+          valor={item?.valor ?? item?.amount ?? item?.population}
         />
       ))}
     </View>
@@ -41,6 +42,9 @@ function LegendaItem({ nome, cor, valor }) {
     <View
       style={styles.item}
       accessible
+      accessibilityLabel={`Categoria ${
+        nome || "sem nome"
+      }, valor ${valorFormatado}`}
       testID={`legenda-item-${(nome || "sem-nome")
         .toLowerCase()
         .replace(/\s+/g, "-")}`}
@@ -50,7 +54,7 @@ function LegendaItem({ nome, cor, valor }) {
           style={[
             styles.bolinha,
             {
-              backgroundColor: cor || COLORS.categoria?.outros || COLORS.verde,
+              backgroundColor: cor || COLORS.verde,
             },
           ]}
         />

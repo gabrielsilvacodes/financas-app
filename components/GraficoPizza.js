@@ -1,36 +1,34 @@
 import { useMemo } from "react";
 import { StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { PieChart } from "react-native-chart-kit";
+
 import COLORS from "../constants/colors";
 
 /**
- * Gráfico de pizza com distribuição de gastos por categoria.
+ * Gráfico de pizza com distribuição de valores por categoria.
+ * Ideal para representar gastos ou entradas por tipo.
  */
 export default function GraficoPizza({
   dados = [],
   height = 220,
-  backgroundColor = COLORS.neutroClaro || "#F5F5F5",
+  backgroundColor = COLORS.neutroClaro,
 }) {
   const { width } = useWindowDimensions();
-  // Garante boa visualização até em categorias numerosas
   const chartWidth = Math.max(width - 48, 240);
 
   const chartData = useMemo(() => {
     if (!Array.isArray(dados)) return [];
+
     return dados
-      .map(({ name, population, amount, color }) => {
-        // Suporte para amount OU population (backward compatibility)
-        const value =
-          typeof population !== "undefined"
-            ? parseFloat(population)
-            : parseFloat(amount);
+      .map(({ name, population, amount, valor, color }) => {
+        const value = parseFloat(population ?? amount ?? valor);
 
         if (isNaN(value) || value <= 0) return null;
 
         return {
           name: name?.trim() || "Sem nome",
-          population: value, // PIE CHART REQUER ESSA KEY!
-          color: color || COLORS.categoria?.outros || COLORS.verde,
+          population: value,
+          color: color || COLORS.verde, // fallback robusto
           legendFontColor: COLORS.textoPrincipal,
           legendFontSize: 14,
         };
@@ -43,7 +41,6 @@ export default function GraficoPizza({
     [chartData]
   );
 
-  // Estado vazio amigável
   if (chartData.length === 0 || total === 0) {
     return (
       <View style={styles.semDados}>
@@ -68,7 +65,7 @@ export default function GraficoPizza({
           },
         }}
         style={styles.chart}
-        hasLegend={false} // Preferir legenda externa personalizada
+        hasLegend={false}
         accessibilityElementsHidden
         importantForAccessibility="no-hide-descendants"
       />
@@ -80,7 +77,7 @@ const styles = StyleSheet.create({
   container: {
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.neutroClaro || "#F5F5F5",
+    backgroundColor: COLORS.neutroClaro,
     borderRadius: 16,
     marginBottom: 16,
     minHeight: 220,

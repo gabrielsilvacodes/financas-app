@@ -10,16 +10,17 @@ const TIPOS_VALIDOS = ["entrada", "saida"];
 
 export default function AdicionarTransacao() {
   const router = useRouter();
-  const { tipo } = useLocalSearchParams();
+  const { tipo: tipoParam } = useLocalSearchParams();
 
-  // Normaliza o tipo e verifica validade
+  // 🧹 Normaliza e valida o tipo
   const tipoNormalizado = useMemo(
-    () => (typeof tipo === "string" ? tipo.toLowerCase() : ""),
-    [tipo]
+    () => (typeof tipoParam === "string" ? tipoParam.trim().toLowerCase() : ""),
+    [tipoParam]
   );
 
   const tipoEhValido = TIPOS_VALIDOS.includes(tipoNormalizado);
 
+  // 🚫 Redireciona se tipo for inválido
   useEffect(() => {
     if (!tipoEhValido) {
       Alert.alert("Erro", "Tipo de transação inválido.");
@@ -27,16 +28,20 @@ export default function AdicionarTransacao() {
     }
   }, [tipoEhValido, router]);
 
+  // ✅ Callback após salvar
   const handleSalvar = () => {
-    // 🚀 Redireciona após salvar
     router.replace("/");
   };
 
-  // Evita exibição se o tipo é inválido
+  // 🛑 Evita renderização se tipo for inválido
   if (!tipoEhValido) return null;
 
   return (
-    <View style={styles.container} testID="adicionar-transacao-screen">
+    <View
+      style={styles.container}
+      testID="adicionar-transacao-screen"
+      accessibilityRole="main"
+    >
       <Header titulo="Adicionar Transação" mostrarVoltar />
       <FormTransacao tipo={tipoNormalizado} onSalvar={handleSalvar} />
     </View>

@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { memo } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+
 import COLORS from "../constants/colors";
 import { formataValor } from "../utils/formatacao";
 
@@ -28,13 +29,15 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
     typeof categoria === "string"
       ? categoria
       : typeof categoria === "object"
-      ? categoria.value || categoria.nome || null
-      : null;
+      ? categoria?.value || categoria?.nome || "Outros"
+      : "Outros";
 
-  const dataSegura = typeof data === "string" ? data : "";
+  const dataSegura = typeof data === "string" && data.trim() !== "" ? data : "";
 
   const handleEditar = () => {
-    router.push(`/transacoes/editar/${id}`);
+    if (id) {
+      router.push(`/transacoes/editar/${id}`);
+    }
   };
 
   return (
@@ -47,7 +50,7 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
       }`}
       testID={`gasto-item-${id}`}
     >
-      {/* Lado esquerdo: título, categoria, data */}
+      {/* Informações à esquerda: nome, categoria, data */}
       <View style={styles.info}>
         <View style={styles.topo}>
           <Text
@@ -78,18 +81,19 @@ function GastoItem({ id, data, nome, valor, categoria, tipo }) {
           )}
         </View>
 
-        {dataSegura ? (
+        {dataSegura !== "" && (
           <Text style={styles.data} testID="gasto-data">
             {dataSegura}
           </Text>
-        ) : null}
+        )}
       </View>
 
-      {/* Lado direito: valor e botão editar */}
+      {/* Lado direito: valor e botão de edição */}
       <View style={styles.ladoDireito}>
         <Text style={[styles.valor, { color: corValor }]} testID="gasto-valor">
           {valorFormatado}
         </Text>
+
         <TouchableOpacity
           onPress={handleEditar}
           style={styles.botaoEditar}

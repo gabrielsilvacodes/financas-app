@@ -1,25 +1,28 @@
 // constants/categorias.js
 
 /**
- * Estrutura padrão de categorias para transações.
+ * Categorias padrão para transações financeiras.
+ * Estrutura compatível com componentes como DropDownPicker.
+ *
  * Cada categoria possui:
- *  - chave: identificador único
- *  - nome: label exibido na UI
- *  - cor: cor hexadecimal para exibição
+ *  - label: Nome visível na interface
+ *  - value: Identificador único usado internamente
+ *  - cor: Cor para destaque visual (hexadecimal)
  */
+
 export const CATEGORIAS_PADRAO = {
   entrada: [
-    { chave: "salario", nome: "Salário", cor: "#2D6A4F" },
-    { chave: "presente", nome: "Presente", cor: "#38A3A5" },
-    { chave: "venda", nome: "Venda", cor: "#80ED99" },
-    { chave: "outros_entrada", nome: "Outros", cor: "#A0C4FF" }, // padrão singular para chave
+    { label: "Salário", value: "salario", cor: "#2D6A4F" },
+    { label: "Presente", value: "presente", cor: "#38A3A5" },
+    { label: "Venda", value: "venda", cor: "#80ED99" },
+    { label: "Outros", value: "outros_entrada", cor: "#A0C4FF" },
   ],
   saida: [
-    { chave: "alimentacao", nome: "Alimentação", cor: "#E76F51" },
-    { chave: "transporte", nome: "Transporte", cor: "#F4A261" },
-    { chave: "lazer", nome: "Lazer", cor: "#E5989B" },
-    { chave: "educacao", nome: "Educação", cor: "#B5838D" },
-    { chave: "saude", nome: "Saúde", cor: "#FFB4A2" },
-    { chave: "outros_saida", nome: "Outros", cor: "#CDB4DB" }, // padrão singular para chave
+    { label: "Alimentação", value: "alimentacao", cor: "#E76F51" },
+    { label: "Transporte", value: "transporte", cor: "#F4A261" },
+    { label: "Lazer", value: "lazer", cor: "#E5989B" },
+    { label: "Educação", value: "educacao", cor: "#B5838D" },
+    { label: "Saúde", value: "saude", cor: "#FFB4A2" },
+    { label: "Outros", value: "outros_saida", cor: "#CDB4DB" },
   ],
 };

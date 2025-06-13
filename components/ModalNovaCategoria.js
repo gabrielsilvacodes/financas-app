@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -12,9 +11,9 @@ import {
 } from "react-native";
 import { ColorPicker } from "react-native-color-picker";
 import Modal from "react-native-modal";
-import COLORS from "../constants/colors";
 
-const CATEGORIAS_KEY = "@categorias_personalizadas";
+import COLORS from "../constants/colors";
+import { carregarCategorias, salvarCategorias } from "../utils/storage";
 
 export default function ModalNovaCategoria({
   visivel,
@@ -34,23 +33,6 @@ export default function ModalNovaCategoria({
     }
   }, [visivel]);
 
-  async function salvarCategoriaLocal(novaCategoria) {
-    try {
-      const armazenadas = await AsyncStorage.getItem(CATEGORIAS_KEY);
-      const categorias = armazenadas ? JSON.parse(armazenadas) : [];
-
-      const categoriasFiltradas = categorias.filter(
-        (cat) => cat.chave !== novaCategoria.chave
-      );
-
-      const atualizadas = [...categoriasFiltradas, novaCategoria];
-      await AsyncStorage.setItem(CATEGORIAS_KEY, JSON.stringify(atualizadas));
-    } catch (e) {
-      console.warn("Erro ao salvar categoria personalizada:", e);
-      Alert.alert("Erro", "Não foi possível salvar a categoria.");
-    }
-  }
-
   const handleSalvar = async () => {
     const nomeLimpo = nome.trim();
     if (!nomeLimpo) {
@@ -59,26 +41,34 @@ export default function ModalNovaCategoria({
     }
 
     const chave = nomeLimpo.toLowerCase().replace(/\s+/g, "_");
+    const categoriaPadronizada = {
+      label: nomeLimpo,
+      value: nomeLimpo,
+      cor,
+      key: chave,
+    };
 
     try {
-      const armazenadas = await AsyncStorage.getItem(CATEGORIAS_KEY);
-      const categorias = armazenadas ? JSON.parse(armazenadas) : [];
+      const todas = await carregarCategorias();
+      const existentes = todas[tipo] || [];
 
-      const duplicada = categorias.some(
-        (cat) => cat.chave?.toLowerCase() === chave
+      const duplicada = existentes.some(
+        (cat) => cat.value?.toLowerCase() === nomeLimpo.toLowerCase()
       );
+
       if (duplicada) {
         Alert.alert("Duplicado", "Já existe uma categoria com esse nome.");
         return;
       }
 
-      const novaCategoria = { chave, nome: nomeLimpo, cor, tipo };
-      await salvarCategoriaLocal(novaCategoria);
-      onSalvar(novaCategoria);
+      const atualizadas = [...existentes, categoriaPadronizada];
+      await salvarCategorias({ ...todas, [tipo]: atualizadas });
+
+      onSalvar(categoriaPadronizada); // envia para o FormTransacao
       onFechar();
     } catch (e) {
-      console.warn("Erro ao verificar duplicatas:", e);
-      Alert.alert("Erro", "Erro ao verificar duplicações.");
+      console.warn("Erro ao salvar categoria:", e);
+      Alert.alert("Erro", "Não foi possível salvar a categoria.");
     }
   };
 
@@ -100,7 +90,7 @@ export default function ModalNovaCategoria({
         style={styles.container}
       >
         <View style={styles.modal}>
-          <Text style={styles.titulo} accessibilityRole="header">
+          <Text style={styles.titulo}>
             Nova Categoria {tipo === "entrada" ? "(entrada)" : "(saída)"}
           </Text>
 
@@ -114,8 +104,6 @@ export default function ModalNovaCategoria({
             maxLength={30}
             returnKeyType="done"
             autoFocus
-            accessible
-            accessibilityLabel="Campo nome da categoria"
           />
 
           <Text style={styles.label}>Cor da categoria</Text>
@@ -126,8 +114,6 @@ export default function ModalNovaCategoria({
             ]}
             onPress={() => setMostrarPicker((v) => !v)}
             activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Escolher cor da categoria"
           >
             <View style={styles.corBola} />
             <Text style={styles.corTexto}>Escolher cor</Text>
@@ -152,8 +138,6 @@ export default function ModalNovaCategoria({
               style={styles.botaoCancelar}
               onPress={onFechar}
               activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Cancelar"
             >
               <Text style={styles.txtCancelar}>Cancelar</Text>
             </TouchableOpacity>
@@ -162,8 +146,6 @@ export default function ModalNovaCategoria({
               onPress={handleSalvar}
               disabled={!nome.trim()}
               activeOpacity={0.8}
-              accessibilityRole="button"
-              accessibilityLabel="Salvar categoria"
             >
               <Text style={styles.txtSalvar}>Salvar</Text>
             </TouchableOpacity>
@@ -175,14 +157,8 @@ export default function ModalNovaCategoria({
 }
 
 const styles = StyleSheet.create({
-  modalRaiz: {
-    justifyContent: "center",
-    margin: 0,
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-  },
+  modalRaiz: { justifyContent: "center", margin: 0 },
+  container: { flex: 1, justifyContent: "center" },
   modal: {
     backgroundColor: COLORS.branco,
     borderRadius: 16,
@@ -200,7 +176,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
     color: COLORS.textoPrincipal,
-    letterSpacing: 0.2,
   },
   label: {
     fontWeight: "600",

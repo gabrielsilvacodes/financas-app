@@ -9,18 +9,19 @@
  * @returns {string} - Valor no formato "R$ X.XXX,XX"
  */
 export function formataValor(valor) {
-  // Remove qualquer símbolo não numérico, exceto vírgula e ponto
-  let numero =
-    typeof valor === "string"
-      ? Number(valor.replace(/[^0-9,.-]/g, "").replace(",", "."))
-      : Number(valor);
+  let numero = 0;
 
-  // Se for inválido, retorna zero formatado
-  if (isNaN(numero) || !isFinite(numero)) {
+  if (typeof valor === "string") {
+    const limpo = valor.replace(/[^0-9,-.]/g, "").replace(",", ".");
+    numero = Number(limpo);
+  } else if (typeof valor === "number") {
+    numero = valor;
+  }
+
+  if (!Number.isFinite(numero)) {
     return "R$ 0,00";
   }
 
-  // Formata para moeda brasileira
   return numero.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",

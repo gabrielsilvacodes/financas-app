@@ -138,11 +138,11 @@ export default function ListaGastos() {
           style={[styles.topo, { paddingHorizontal: width < 360 ? 12 : 20 }]}
         >
           <View style={styles.filtros}>
-            {categoriasDisponiveis.map((cat, index) => {
-              const chave = String(cat);
+            {categoriasDisponiveis.map((cat) => {
+              const chave = String(cat).trim();
               return (
                 <FiltroBotao
-                  key={`filtro-${index}-${chave}`}
+                  key={`filtro-${chave.toLowerCase()}`}
                   texto={chave}
                   ativo={chave === (filtroCategoria || CATEGORIA_TODAS)}
                   onPress={() =>
@@ -194,8 +194,11 @@ export default function ListaGastos() {
                   .replace(".", ",")}
               </Text>
             </View>
-            {transacoes.map((gasto) => (
-              <View key={`gasto-${gasto.id}`} style={styles.transacaoContainer}>
+            {transacoes.map((gasto, i) => (
+              <View
+                key={`gasto-${gasto.id || i}`}
+                style={styles.transacaoContainer}
+              >
                 <GastoItem {...gasto} />
                 <TouchableOpacity
                   onPress={() => removerGasto(gasto.id, gasto.titulo)}

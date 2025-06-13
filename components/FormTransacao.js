@@ -34,7 +34,16 @@ const OPC_NOVA_CATEGORIA = {
   label: "➕ Nova categoria...",
   value: "nova_categoria",
   cor: COLORS.cinzaClaro,
+  key: "nova_categoria",
 };
+
+// Função utilitária para garantir estrutura única de categoria
+const normalizarCategoria = (cat, idx = 0) => ({
+  label: cat.label || cat.nome || `Categoria ${idx + 1}`,
+  value: cat.value || cat.nome || `valor-${idx + 1}`,
+  cor: cat.cor || COLORS.cinzaClaro,
+  key: cat.key || cat.value || cat.nome || `cat-${idx + 1}`,
+});
 
 export default function FormTransacao({
   tipo = "saida",
@@ -45,82 +54,111 @@ export default function FormTransacao({
   const [tipoSelecionado, setTipoSelecionado] = useState(tipo);
   const [valor, setValor] = useState("");
   const [descricao, setDescricao] = useState("");
-  const [data, setData] = useState(null);
-  const [categoria, setCategoria] = useState("");
+  const [data, setData] = useState(new Date());
+  const [categoria, setCategoria] = useState(null);
   const [open, setOpen] = useState(false);
   const [categorias, setCategorias] = useState([]);
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarPicker, setMostrarPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Carregamento robusto de categorias (padrão + personalizadas, sem duplicatas)
   const carregarCategoriasPersonalizadas = useCallback(async () => {
     try {
-      const categoriasPadrao = CATEGORIAS_PADRAO[tipoSelecionado].map(
-        (cat) => ({
-          label: cat.nome,
-          value: cat.nome,
-          cor: cat.cor,
-        })
+      const padrao = (CATEGORIAS_PADRAO[tipoSelecionado] || []).map(
+        normalizarCategoria
       );
 
-      const categoriasSalvas = await carregarCategorias(categoriasPadrao);
-      const categoriasValidas = Array.isArray(categoriasSalvas)
-        ? categoriasSalvas
-        : categoriasPadrao;
+      const salvas = await carregarCategorias();
+      const personalizadasRaw = salvas?.[tipoSelecionado] || [];
+      const personalizadas = personalizadasRaw.map(normalizarCategoria);
 
-      const listaFinal = [
-        ...categoriasValidas.filter(
-          (c) => c.value !== OPC_NOVA_CATEGORIA.value
-        ),
-        OPC_NOVA_CATEGORIA,
-      ];
+      // Remover duplicadas (pelo value)
+      const todas = [...personalizadas, ...padrao].filter(
+        (cat, idx, arr) => arr.findIndex((c) => c.value === cat.value) === idx
+      );
 
+      const listaFinal = [...todas, OPC_NOVA_CATEGORIA];
       setCategorias(listaFinal);
-      if (!categoria && listaFinal.length > 0) {
-        setCategoria(listaFinal[0].value);
+
+      // Se a categoria atual não existe mais, ou não está definida, selecione a primeira
+      if (!categoria || !listaFinal.find((c) => c.value === categoria)) {
+        const primeira = listaFinal.find(
+          (c) => c.value !== OPC_NOVA_CATEGORIA.value
+        );
+        setCategoria(primeira?.value || null);
       }
     } catch (error) {
-      console.error("Erro ao carregar categorias:", error);
       setCategorias([OPC_NOVA_CATEGORIA]);
+      setCategoria(null);
     }
-  }, [tipoSelecionado, categoria]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tipoSelecionado]);
 
+  // Carrega categorias sempre que tipo muda ou modal fecha
   useEffect(() => {
     carregarCategoriasPersonalizadas();
-  }, [carregarCategoriasPersonalizadas]);
+    // eslint-disable-next-line
+  }, [carregarCategoriasPersonalizadas, mostrarModal]);
 
+  // Ao receber uma transação existente (edição)
   useEffect(() => {
     if (transacaoExistente) {
       setValor(String(transacaoExistente.valor).replace(".", ","));
       setDescricao(transacaoExistente.titulo);
       setData(new Date(transacaoExistente.data));
-      setCategoria(transacaoExistente.categoria);
+      setCategoria(
+        typeof transacaoExistente.categoria === "object"
+          ? transacaoExistente.categoria?.value ||
+              transacaoExistente.categoria?.chave
+          : transacaoExistente.categoria
+      );
       setTipoSelecionado(transacaoExistente.tipo);
-    } else {
-      setData(new Date());
     }
   }, [transacaoExistente]);
 
+  // Sempre que mudar tipo, reseta para a primeira categoria válida
+  useEffect(() => {
+    if (categorias.length > 0) {
+      const primeira = categorias.find(
+        (c) => c.value !== OPC_NOVA_CATEGORIA.value
+      );
+      setCategoria(primeira?.value || null);
+    }
+    // eslint-disable-next-line
+  }, [tipoSelecionado]);
+
+  // Adicionar nova categoria (já seleciona a recém-criada)
   const adicionarNovaCategoria = async ({ nome, cor }) => {
-    const nova = { label: nome, value: nome, cor };
-    const novasCategorias = [
-      ...categorias.filter((c) => c.value !== OPC_NOVA_CATEGORIA.value),
-      nova,
-    ];
-    await salvarCategorias(novasCategorias);
-    await carregarCategoriasPersonalizadas();
-    setCategoria(nome);
+    const nova = {
+      label: nome,
+      value: nome,
+      cor,
+      key: nome.toLowerCase().replace(/\s+/g, "-"),
+    };
+
+    const salvas = await carregarCategorias();
+    const atualizadas = [...(salvas?.[tipoSelecionado] || []), nova];
+
+    await salvarCategorias({
+      ...salvas,
+      [tipoSelecionado]: atualizadas,
+    });
+
     setMostrarModal(false);
+    await carregarCategoriasPersonalizadas();
+    setCategoria(nova.value);
   };
 
-  const handleCategoriaChange = useCallback((value) => {
+  // Ao trocar categoria no picker
+  const handleCategoriaChange = (value) => {
     if (value === OPC_NOVA_CATEGORIA.value) {
       setOpen(false);
-      setTimeout(() => setMostrarModal(true), 250);
+      setTimeout(() => setMostrarModal(true), 200);
     } else {
       setCategoria(value);
     }
-  }, []);
+  };
 
   const isFormValido =
     valor &&
@@ -130,6 +168,7 @@ export default function FormTransacao({
     !loading &&
     parseValor(valor) > 0;
 
+  // Salvamento robusto
   const handleSalvar = async () => {
     if (!validarCampos({ valor, descricao, data })) {
       Alert.alert("Campos obrigatórios", "Preencha todos os campos.");
@@ -142,19 +181,15 @@ export default function FormTransacao({
       return;
     }
 
-    if (!categoria) {
-      Alert.alert("Categoria obrigatória", "Escolha uma categoria.");
-      return;
-    }
-
     setLoading(true);
+    const categoriaObj = categorias.find((c) => c.value === categoria);
 
     const novaTransacao = criarTransacao({
       valor,
       descricao,
       data: data.toISOString(),
       tipo: tipoSelecionado,
-      categoria,
+      categoria: categoriaObj,
       idExistente: transacaoExistente?.id,
     });
 
@@ -173,7 +208,7 @@ export default function FormTransacao({
           ? "Transação editada!"
           : "Transação salva com sucesso!"
       );
-      if (typeof onSalvar === "function") onSalvar(novaTransacao);
+      onSalvar?.(novaTransacao);
     } catch {
       Alert.alert("Erro", "Não foi possível salvar os dados.");
     } finally {
@@ -187,14 +222,13 @@ export default function FormTransacao({
       style={{ flex: 1 }}
     >
       <ScrollView
-        nestedScrollEnabled
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={[
           styles.form,
           { padding: width < 360 ? 16 : 24 },
         ]}
-        keyboardShouldPersistTaps="handled"
       >
-        {/* Tipo */}
+        {/* Botões tipo entrada/saída */}
         <View style={styles.tipoContainer}>
           {["entrada", "saida"].map((t) => (
             <TouchableOpacity
@@ -211,9 +245,6 @@ export default function FormTransacao({
                       : COLORS.cinzaClaro,
                 },
               ]}
-              accessibilityRole="button"
-              accessibilityLabel={`Selecionar tipo ${t}`}
-              hitSlop={8}
               disabled={loading}
             >
               <Text
@@ -233,7 +264,7 @@ export default function FormTransacao({
           ))}
         </View>
 
-        {/* Valor */}
+        {/* Campo valor */}
         <Text style={styles.label}>Valor*</Text>
         <View style={styles.valorContainer}>
           <Text style={styles.prefixo}>R$</Text>
@@ -248,23 +279,23 @@ export default function FormTransacao({
           />
         </View>
 
-        {/* Descrição */}
+        {/* Campo descrição */}
         <Text style={styles.label}>Descrição*</Text>
         <TextInput
-          placeholder="Ex: Supermercado, Salário..."
+          placeholder="Ex: Mercado, Salário..."
           value={descricao}
           onChangeText={setDescricao}
           style={styles.input}
           editable={!loading}
-          placeholderTextColor={COLORS.cinzaTexto}
           maxLength={40}
+          placeholderTextColor={COLORS.cinzaTexto}
         />
 
-        {/* Categoria */}
+        {/* Dropdown de categorias */}
         <Text style={styles.label}>Categoria*</Text>
         <DropDownPicker
           open={open}
-          value={categoria === OPC_NOVA_CATEGORIA.value ? null : categoria}
+          value={categoria}
           items={categorias}
           setOpen={setOpen}
           onChangeValue={handleCategoriaChange}
@@ -272,7 +303,8 @@ export default function FormTransacao({
           placeholder="Selecione ou adicione uma categoria"
           style={styles.dropdown}
           dropDownContainerStyle={styles.dropdownContainer}
-          zIndex={Platform.OS === "ios" ? 2000 : 1000}
+          listMode="SCROLLVIEW"
+          zIndex={2000}
           disabled={loading}
         />
 
@@ -299,11 +331,11 @@ export default function FormTransacao({
           (Platform.OS === "ios" ? (
             <View style={{ marginBottom: 16 }}>
               <DateTimePicker
-                value={data || new Date()}
+                value={data}
                 mode="date"
-                onChange={(_, selectedDate) => {
-                  if (selectedDate) setData(selectedDate);
-                }}
+                onChange={(_, selectedDate) =>
+                  selectedDate && setData(selectedDate)
+                }
                 locale="pt-BR"
               />
               <TouchableOpacity
@@ -315,16 +347,16 @@ export default function FormTransacao({
             </View>
           ) : (
             <DateTimePicker
-              value={data || new Date()}
+              value={data}
               mode="date"
               onChange={(_, selectedDate) => {
                 setMostrarPicker(false);
-                if (selectedDate) setData(selectedDate);
+                selectedDate && setData(selectedDate);
               }}
             />
           ))}
 
-        {/* Botão Salvar */}
+        {/* Botão salvar */}
         <TouchableOpacity
           onPress={handleSalvar}
           style={[

@@ -3,7 +3,7 @@ import COLORS from "../constants/colors";
 import { parseValor } from "./transacaoUtils";
 
 /**
- * Soma os valores das transações de um tipo específico.
+ * Soma os valores de transações filtradas por tipo (entrada ou saída).
  */
 export function somarValores(transacoes = [], tipo = "entrada") {
   return transacoes
@@ -12,58 +12,63 @@ export function somarValores(transacoes = [], tipo = "entrada") {
 }
 
 /**
- * Gera os dados para o gráfico de pizza de SAÍDAS por categoria (PieChart).
+ * Gera os dados para o gráfico de pizza de SAÍDAS por categoria.
  */
 export function gerarDadosPizza(transacoes = [], categorias = []) {
   if (!Array.isArray(transacoes) || !Array.isArray(categorias)) return [];
 
   return categorias
     .map((cat) => {
-      const chave = (cat?.chave || "").trim().toLowerCase();
+      const chave = cat?.chave?.trim().toLowerCase();
       if (!chave) return null;
 
       const total = transacoes
         .filter(
           (t) =>
             t?.tipo?.toLowerCase() === "saida" &&
-            (t?.categoria?.chave || "").trim().toLowerCase() === chave
+            t?.categoria?.chave?.trim().toLowerCase() === chave
         )
         .reduce((acc, t) => acc + parseValor(t.valor), 0);
 
-      return {
-        name: cat.nome || chave,
-        population: total,
-        color: cat.cor || COLORS?.categoria?.outros || COLORS.verde,
-      };
+      return total > 0
+        ? {
+            name: cat.nome || chave,
+            population: total,
+            color: cat.cor || COLORS.categoria?.outros || COLORS.verde,
+          }
+        : null;
     })
-    .filter((item) => item && item.population > 0);
+    .filter(Boolean);
 }
 
 /**
- * Agrupa transações por mês (ex: "abril de 2025").
+ * Agrupa transações por mês no formato "mês de ano" (ex: abril de 2025).
  */
 export function agruparPorMes(transacoes = []) {
   return transacoes.reduce((acc, item) => {
     const data = new Date(item?.data);
     if (isNaN(data)) return acc;
+
     const mesAno = new Intl.DateTimeFormat("pt-BR", {
       month: "long",
       year: "numeric",
     }).format(data);
+
     if (!acc[mesAno]) acc[mesAno] = [];
     acc[mesAno].push(item);
+
     return acc;
   }, {});
 }
 
 /**
- * Gera dados para gráfico de linha de SAÍDAS mensais.
+ * Gera dados para gráfico de linha com SAÍDAS mensais agregadas.
  */
 export function gerarResumoMensal(transacoesAgrupadas = {}) {
   const mesesOrdenados = Object.keys(transacoesAgrupadas).sort((a, b) => {
-    const dA = new Date("01 " + a);
-    const dB = new Date("01 " + b);
-    return dA - dB;
+    const dataA = new Date("01 " + a);
+    const dataB = new Date("01 " + b);
+    return dataA - dataB;
   });
 
   const labels = mesesOrdenados.map((mes) =>
@@ -86,7 +91,7 @@ export function gerarResumoMensal(transacoesAgrupadas = {}) {
 }
 
 /**
- * Gera dados para gráfico de pizza de SAÍDAS de um mês específico.
+ * Gera dados para gráfico de pizza de SAÍDAS em um mês específico.
  */
 export function gerarPizzaMes(transacoes = [], mesSelecionado = "") {
   const formatter = new Intl.DateTimeFormat("pt-BR", {
@@ -104,9 +109,10 @@ export function gerarPizzaMes(transacoes = [], mesSelecionado = "") {
   });
 
   const somaPorCategoria = saidasDoMes.reduce((acc, t) => {
-    const valor = parseValor(t.valor);
     const chave = t?.categoria?.chave?.trim().toLowerCase();
+    const valor = parseValor(t.valor);
     if (!chave || isNaN(valor)) return acc;
+
     acc[chave] = (acc[chave] || 0) + valor;
     return acc;
   }, {});
@@ -124,11 +130,11 @@ export function gerarPizzaMes(transacoes = [], mesSelecionado = "") {
 }
 
 /**
- * Gera dados para gráfico de barras com SAÍDAS por categoria em um período.
+ * Gera dados para gráfico de barras com SAÍDAS por categoria em determinado período.
  */
 export function gerarBarrasPorPeriodo(transacoes = [], periodo = "30dias") {
   const hoje = new Date();
-  let dataLimite = new Date(hoje);
+  const dataLimite = new Date(hoje);
 
   switch (periodo) {
     case "7dias":
@@ -150,9 +156,10 @@ export function gerarBarrasPorPeriodo(transacoes = [], periodo = "30dias") {
   });
 
   const somaPorCategoria = saidas.reduce((acc, t) => {
-    const valor = parseValor(t.valor);
     const chave = t?.categoria?.chave?.trim().toLowerCase();
+    const valor = parseValor(t.valor);
     if (!chave || isNaN(valor)) return acc;
+
     acc[chave] = (acc[chave] || 0) + valor;
     return acc;
   }, {});
